@@ -22,7 +22,7 @@ how seven decoding rules change the stories, and which errors remain whatever th
 | 📉 **Test perplexity** | **5.74** (5.3M baseline: 9.68) on a leakage-free held-out split |
 | ⚡ **Speed** | 141 tokens/s, **1.4 s** per 200-token story on the CPU |
 | 📄 **Article** | IEEE Access draft with proofs, statistics and figures: [`project1_paper/`](project1_paper/) |
-| 🎓 **Tutorial** | interactive beginner's guide with animations built from the real model: [`tutorial/project1.html`](tutorial/project1.html) |
+| 🎓 **Tutorial** | interactive beginner's guide with animations built from the real model: **[open the live tutorial](https://istiaque010.github.io/Autoregressive-Transformer-Language-Model/tutorial/project1.html)** (source: [`tutorial/`](tutorial/)) |
 
 ---
 
@@ -149,7 +149,7 @@ scripts/         data inspection & cleaning, tokenizer, benchmark, plots, decodi
 configs/         smoke / baseline / small model configs, evaluation prompts
 tests/           causal-mask proofs, pipeline tests, metric tests
 results/         metrics (eval.json, training logs), all generated stories, error annotations, figures
-tutorial/        interactive HTML tutorial (download the folder and open project1.html in a browser)
+tutorial/        interactive HTML tutorial (served live by GitHub Pages; index.html redirects to it)
 project1_paper/  IEEE Access article: main.tex, references.bib, figures, analysis script, preview PDF
 INSTRUCTIONS.md  the 14-phase build log: every step, result and decision
 ```
@@ -181,6 +181,10 @@ If you use this code or the findings, please cite:
   howpublished = {\url{https://github.com/istiaque010/Autoregressive-Transformer-Language-Model}}
 }
 ```
+
+## License
+Code released under the [MIT License](LICENSE). TinyStories is a third-party dataset with its own license; it is
+downloaded by the scripts and not redistributed here.
 
 ## Acknowledgements
 TinyStories by Eldan & Li (2023). The architecture follows GPT-2 (Radford et al., 2019); top-p sampling follows
