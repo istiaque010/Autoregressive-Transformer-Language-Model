@@ -24,6 +24,11 @@ how seven decoding rules change the stories, and which errors remain whatever th
 | 📄 **Article** | IEEE Access draft with proofs, statistics and figures: [`project1_paper/`](project1_paper/) |
 | 🎓 **Tutorial** | interactive beginner's guide with animations built from the real model: **[open the live tutorial](https://istiaque010.github.io/Autoregressive-Transformer-Language-Model/tutorial/project1.html)** (source: [`tutorial/`](tutorial/)) |
 
+<p align="center">
+  <img src="project1_paper/figures/fig_architecture.png" width="470" alt="Model architecture and study design"><br>
+  <sub><b>Figure 1.</b> The model (left) and how it is evaluated (right).</sub>
+</p>
+
 ---
 
 ## Key findings
@@ -35,8 +40,17 @@ therefore partly measure memorisation. We removed duplicates, truncated stories 
 (2,119,719 → 1,772,187 training stories), and split validation into a validation half and a **test half that
 was never used for any decision**. Validation and test perplexity then agree to the third decimal (5.735 vs. 5.739).
 
+<p align="center">
+  <img src="project1_paper/figures/fig_learning_curves.png" width="520" alt="Learning curves"><br>
+  <sub><b>Figure 2.</b> Training (thin) and validation (thick) loss against tokens seen. No overfitting; at the same
+  41M tokens the 13.9M model is already ahead (2.10 vs. 2.27).</sub>
+</p>
+
 ### 2. Pure sampling looks best on the usual metrics, but invents words
-![Diversity vs. repetition](project1_paper/figures/fig_tradeoff.png)
+<p align="center">
+  <img src="project1_paper/figures/fig_tradeoff.png" width="540" alt="Diversity vs. repetition"><br>
+  <sub><b>Figure 3.</b> Diversity against repetition for each decoding rule (★ = human-written stories).</sub>
+</p>
 
 | Decoding (13.9M model) | Distinct-2 ↑ | Repetitive stories | Ends by itself | **Made-up words** |
 |---|---|---|---|---|
@@ -58,7 +72,12 @@ and measure it: truncated decoders write text the model finds far more probable 
 (1.20–1.36 vs. 1.72 nats/token). Only pure sampling matches the human level (1.76), which shows the model is well
 calibrated.
 
-<p align="center"><img src="project1_paper/figures/fig_self_nll.png" width="48%"> <img src="project1_paper/figures/fig_nucleus.png" width="48%"></p>
+<p align="center">
+  <img src="project1_paper/figures/fig_self_nll.png" width="415" alt="Likelihood of generated text">
+  <img src="project1_paper/figures/fig_nucleus.png" width="415" alt="Nucleus size distribution"><br>
+  <sub><b>Figure 4.</b> Left: how probable each decoder's text is to the model itself (only T = 1.0 matches human
+  text). Right: how many tokens top-p keeps per step, against the fixed k = 20 and k = 50.</sub>
+</p>
 
 **Why a fixed k fails:** the number of plausible next tokens varies by two orders of magnitude. In 20.7% of steps
 one token already holds 90% of the probability (top-20 still adds 19 tail tokens there); in 21.8% of steps
@@ -68,7 +87,11 @@ even 20 tokens hold less than 90% (top-20 cuts off good options there). Top-p ad
 distributions give smaller nuclei and more mode-seeking decoding.
 
 ### 4. The errors that remain are about meaning, not grammar
-![Error analysis](project1_paper/figures/fig_errors.png)
+<p align="center">
+  <img src="project1_paper/figures/fig_errors.png" width="820" alt="Error analysis"><br>
+  <sub><b>Figure 5.</b> Error rates in 60 stories with 95% intervals (left) and how often two error types occur in
+  the same story (right).</sub>
+</p>
 
 In 60 annotated stories, **88% contain a contradiction and 55% an entity error, but only 37% a grammatical
 error**. Every story with an entity error also contains a contradiction, and errors increase with story length
