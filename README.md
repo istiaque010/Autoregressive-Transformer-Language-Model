@@ -21,12 +21,12 @@ how seven decoding rules change the stories, and which errors remain whatever th
 | 💻 **Hardware** | one Intel CPU, no GPU: **9.9 h** of training, 1.4 GB peak memory |
 | 📉 **Test perplexity** | **5.74** (5.3M baseline: 9.68) on a leakage-free held-out split |
 | ⚡ **Speed** | 141 tokens/s, **1.4 s** per 200-token story on the CPU |
-| 📄 **Article** | IEEE Access draft with proofs, statistics and figures: [`project1_paper/`](project1_paper/) |
+| 📄 **Article** | journal article in preparation (findings summarised below) |
 | 🎓 **Tutorial** | interactive beginner's guide with animations built from the real model: **[open the live tutorial](https://istiaque010.github.io/Autoregressive-Transformer-Language-Model/tutorial/project1.html)** (source: [`tutorial/`](tutorial/)) |
 
 <p align="center">
-  <img src="project1_paper/figures/fig_architecture.png" width="470" alt="Model architecture and study design"><br>
-  <sub><b>Figure 1.</b> The model (left) and how it is evaluated (right).</sub>
+  <img src="assets/figures/fig_architecture.png" width="840" alt="Model architecture and study design"><br>
+  <sub><b>Figure 1.</b> (a) The Transformer, built from scratch. (b) How the model and its stories are evaluated.</sub>
 </p>
 
 ---
@@ -41,14 +41,14 @@ therefore partly measure memorisation. We removed duplicates, truncated stories 
 was never used for any decision**. Validation and test perplexity then agree to the third decimal (5.735 vs. 5.739).
 
 <p align="center">
-  <img src="project1_paper/figures/fig_learning_curves.png" width="520" alt="Learning curves"><br>
+  <img src="assets/figures/fig_learning_curves.png" width="520" alt="Learning curves"><br>
   <sub><b>Figure 2.</b> Training (thin) and validation (thick) loss against tokens seen. No overfitting; at the same
   41M tokens the 13.9M model is already ahead (2.10 vs. 2.27).</sub>
 </p>
 
 ### 2. Pure sampling looks best on the usual metrics, but invents words
 <p align="center">
-  <img src="project1_paper/figures/fig_tradeoff.png" width="540" alt="Diversity vs. repetition"><br>
+  <img src="assets/figures/fig_tradeoff.png" width="540" alt="Diversity vs. repetition"><br>
   <sub><b>Figure 3.</b> Diversity against repetition for each decoding rule (★ = human-written stories).</sub>
 </p>
 
@@ -73,8 +73,8 @@ and measure it: truncated decoders write text the model finds far more probable 
 calibrated.
 
 <p align="center">
-  <img src="project1_paper/figures/fig_self_nll.png" width="415" alt="Likelihood of generated text">
-  <img src="project1_paper/figures/fig_nucleus.png" width="415" alt="Nucleus size distribution"><br>
+  <img src="assets/figures/fig_self_nll.png" width="415" alt="Likelihood of generated text">
+  <img src="assets/figures/fig_nucleus.png" width="415" alt="Nucleus size distribution"><br>
   <sub><b>Figure 4.</b> Left: how probable each decoder's text is to the model itself (only T = 1.0 matches human
   text). Right: how many tokens top-p keeps per step, against the fixed k = 20 and k = 50.</sub>
 </p>
@@ -88,7 +88,7 @@ distributions give smaller nuclei and more mode-seeking decoding.
 
 ### 4. The errors that remain are about meaning, not grammar
 <p align="center">
-  <img src="project1_paper/figures/fig_errors.png" width="820" alt="Error analysis"><br>
+  <img src="assets/figures/fig_errors.png" width="820" alt="Error analysis"><br>
   <sub><b>Figure 5.</b> Error rates in 60 stories with 95% intervals (left) and how often two error types occur in
   the same story (right).</sub>
 </p>
@@ -145,13 +145,6 @@ python scripts/madeup_words.py --run baseline --run small
 python scripts/error_labels_small.py                               # apply the error annotations
 ```
 
-### 4. Rebuild every statistic and figure of the article (~5 min)
-```bash
-python project1_paper/analysis/paper_analysis.py   # -> project1_paper/analysis/paper_stats.json + figures/
-```
-Compile [`project1_paper/main.tex`](project1_paper/main.tex) with pdfLaTeX + BibTeX (e.g. on Overleaf).
-A preview is in [`project1_paper/main_preview.pdf`](project1_paper/main_preview.pdf).
-
 ### Try the model
 ```bash
 python -m src.generate --ckpt checkpoints/small/model_best.pt --prompt "Tom found a little dog" --method top_p --top_p 0.95
@@ -173,7 +166,7 @@ configs/         smoke / baseline / small model configs, evaluation prompts
 tests/           causal-mask proofs, pipeline tests, metric tests
 results/         metrics (eval.json, training logs), all generated stories, error annotations, figures
 tutorial/        interactive HTML tutorial (served live by GitHub Pages; index.html redirects to it)
-project1_paper/  IEEE Access article: main.tex, references.bib, figures, analysis script, preview PDF
+assets/figures/  figures shown in this README
 INSTRUCTIONS.md  the 14-phase build log: every step, result and decision
 ```
 Not in git (rebuilt by the scripts): `data/` (3.3 GB), `checkpoints/` (2.5 GB), `teacher/` (64 MB, see Releases).
@@ -191,7 +184,7 @@ Not in git (rebuilt by the scripts): `data/` (3.3 GB), `checkpoints/` (2.5 GB), 
 ## Limitations
 One training seed per model; 8 prompts and 40 stories per decoding rule; the error annotation is a single
 first-pass annotation (an independent second annotation is planned); English children's stories only.
-See Section VIII of the article.
+A fuller analysis will appear in the accompanying article.
 
 ## Citation
 If you use this code or the findings, please cite:
@@ -211,4 +204,4 @@ downloaded by the scripts and not redistributed here.
 
 ## Acknowledgements
 TinyStories by Eldan & Li (2023). The architecture follows GPT-2 (Radford et al., 2019); top-p sampling follows
-Holtzman et al. (2020). Full references are in [`project1_paper/references.bib`](project1_paper/references.bib).
+Holtzman et al. (2020). TinyStories: arXiv:2305.07759; top-p sampling: arXiv:1904.09751.
