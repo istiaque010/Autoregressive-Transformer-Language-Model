@@ -1,0 +1,19 @@
+ val loss 1.7467 | perplexity 5.74 (80s)
+test loss 1.7473 | perplexity 5.74 (93s)
+real stories | D1 0.331 D2 0.764 rep4 0.016 | repetition flag above 0.057
+      greedy | D1 0.237 D2 0.586 rep4 0.162 flagged 75% eos 88% n=8
+    temp_0.7 | D1 0.275 D2 0.693 rep4 0.043 flagged 25% eos 92% n=40
+    temp_1.0 | D1 0.334 D2 0.777 rep4 0.013 flagged 2% eos 100% n=40
+    top_k_20 | D1 0.298 D2 0.733 rep4 0.027 flagged 8% eos 95% n=40
+    top_k_50 | D1 0.298 D2 0.726 rep4 0.024 flagged 10% eos 92% n=40
+  top_p_0.90 | D1 0.303 D2 0.738 rep4 0.029 flagged 10% eos 92% n=40
+  top_p_0.95 | D1 0.312 D2 0.742 rep4 0.026 flagged 2% eos 92% n=40
+speed (24 threads, other CPU load 32%): NOT reliable: PC busy or threads limited, re-run with --perf_only
+      greedy | 180.9 tok/s
+    temp_0.7 | 174.3 tok/s
+    temp_1.0 | 173.8 tok/s
+    top_k_20 | 173.2 tok/s
+    top_k_50 | 171.7 tok/s
+  top_p_0.90 | 146.4 tok/s
+  top_p_0.95 | 151.3 tok/s
+wrote results\metrics\small\eval.json, results\metrics\small\eval_report.md and results\generations\small/

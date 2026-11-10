@@ -1,0 +1,30 @@
+# Smoke test: tiny model, verifies loss decreases and checkpoint/resume works.
+run_name: smoke
+seed: 1337
+data:
+  data_dir: data
+  tokenizer: data/tokenizer.json
+model:
+  n_layer: 2
+  n_head: 2
+  n_embd: 128
+  block_size: 128
+  dropout: 0.0
+  bias: true
+train:
+  device: auto          # auto | cpu | cuda
+  precision: fp32       # fp32 | bf16 | fp16 (fp16 only on GPU)
+  batch_size: 4
+  grad_accum_steps: 1
+  max_steps: 200
+  lr: 1.0e-3
+  min_lr: 1.0e-4
+  warmup_steps: 20
+  weight_decay: 0.1
+  betas: [0.9, 0.95]
+  grad_clip: 1.0
+  eval_interval: 50
+  eval_batches: 20
+  log_interval: 10
+  ckpt_interval: 100
+  num_workers: 0

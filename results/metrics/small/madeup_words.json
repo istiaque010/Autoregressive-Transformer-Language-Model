@@ -1,0 +1,52 @@
+{
+  "known_words": 23116,
+  "n_known_stories": 300000,
+  "real_rate": 0.00021004574672807416,
+  "settings": {
+    "greedy": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "temp_0.7": {
+      "madeup_rate": 0.00014310246136233542,
+      "examples": [
+        "agotch"
+      ]
+    },
+    "temp_1.0": {
+      "madeup_rate": 0.003368893879842785,
+      "examples": [
+        "planetsries",
+        "oripped",
+        "alreadypow",
+        "neverld",
+        "liaaay"
+      ]
+    },
+    "top_k_20": {
+      "madeup_rate": 0.0005037148973680896,
+      "examples": [
+        "pewell",
+        "wrento",
+        "dogi",
+        "mirk"
+      ]
+    },
+    "top_k_50": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "top_p_0.90": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "top_p_0.95": {
+      "madeup_rate": 0.00038814853150472245,
+      "examples": [
+        "funnymarket",
+        "cloprope",
+        "remophone"
+      ]
+    }
+  }
+}

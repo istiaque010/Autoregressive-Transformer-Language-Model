@@ -1,0 +1,7 @@
+{
+  "best_val_loss": 1.774219696521759,
+  "best_val_ppl": 5.895678922221094,
+  "steps": 10000,
+  "wall_clock_s": 35619.2,
+  "peak_mem_mb": 1192.9
+}

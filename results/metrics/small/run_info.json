@@ -1,0 +1,68 @@
+{
+  "config": {
+    "run_name": "small",
+    "seed": 1337,
+    "data": {
+      "data_dir": "data/full",
+      "tokenizer": "data/tokenizer.json"
+    },
+    "model": {
+      "n_layer": 6,
+      "n_head": 6,
+      "n_embd": 384,
+      "block_size": 256,
+      "dropout": 0.1,
+      "bias": true
+    },
+    "train": {
+      "device": "auto",
+      "precision": "fp32",
+      "batch_size": 8,
+      "grad_accum_steps": 8,
+      "max_steps": 10000,
+      "lr": 0.0006,
+      "min_lr": 6e-05,
+      "warmup_steps": 500,
+      "weight_decay": 0.1,
+      "betas": [
+        0.9,
+        0.95
+      ],
+      "grad_clip": 1.0,
+      "eval_interval": 500,
+      "eval_batches": 100,
+      "log_interval": 50,
+      "ckpt_interval": 1000,
+      "num_workers": 0
+    }
+  },
+  "model_config": {
+    "vocab_size": 8192,
+    "block_size": 256,
+    "n_layer": 6,
+    "n_head": 6,
+    "n_embd": 384,
+    "dropout": 0.1,
+    "bias": true
+  },
+  "params": {
+    "total": 13891584,
+    "trainable": 13891584,
+    "non_embedding": 10647552
+  },
+  "env": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+    "cpu_count": 24,
+    "ram_gb": 63.7,
+    "torch": "2.14.1+cpu",
+    "device": "cpu",
+    "torch_threads": 24,
+    "cuda_available": false,
+    "hip_version": null,
+    "cuda_version": null
+  },
+  "effective_batch_seqs": 64,
+  "effective_batch_tokens": 16384
+}

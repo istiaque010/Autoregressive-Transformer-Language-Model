@@ -1,0 +1,21 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "cpu_count": 24,
+  "ram_gb": 63.7,
+  "torch": "2.14.1+cpu",
+  "device": "cpu",
+  "torch_threads": 24,
+  "cuda_available": false,
+  "hip_version": null,
+  "cuda_version": null,
+  "matmul_ok": true,
+  "smoke_params": 134912,
+  "smoke_loss_first_last": [
+    6.257,
+    0.538
+  ],
+  "smoke_ok": true,
+  "gpu_backend_status": "CPU only (no CUDA/ROCm device visible to PyTorch)"
+}

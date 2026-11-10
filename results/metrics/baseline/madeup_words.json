@@ -1,0 +1,55 @@
+{
+  "known_words": 23116,
+  "n_known_stories": 300000,
+  "real_rate": 0.00021004574672807416,
+  "settings": {
+    "greedy": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "temp_0.7": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "temp_1.0": {
+      "madeup_rate": 0.004078762306610408,
+      "examples": [
+        "thethis",
+        "newcess",
+        "shely",
+        "revoring",
+        "thatake"
+      ]
+    },
+    "top_k_20": {
+      "madeup_rate": 0.0,
+      "examples": []
+    },
+    "top_k_50": {
+      "madeup_rate": 0.00038187372708757637,
+      "examples": [
+        "lefts",
+        "suus",
+        "lrawroo"
+      ]
+    },
+    "top_p_0.90": {
+      "madeup_rate": 0.00041893590280687055,
+      "examples": [
+        "mouthier",
+        "ofpping",
+        "ware"
+      ]
+    },
+    "top_p_0.95": {
+      "madeup_rate": 0.0006984215672579969,
+      "examples": [
+        "whiteest",
+        "fishs",
+        "kinga",
+        "anghenry",
+        "turnsing"
+      ]
+    }
+  }
+}

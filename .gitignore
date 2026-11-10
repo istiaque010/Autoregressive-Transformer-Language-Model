@@ -1,0 +1,17 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large files, rebuilt with the scripts (see README.md)
+# data/: TinyStories download, cleaned data, token files (3.3 GB), Phases 2-4
+# checkpoints/: training checkpoints (2.5 GB), Phase 8
+/data/
+/checkpoints/
+
+# Teacher package (64 MB) is published as a GitHub Release asset, not in git
+/teacher/
+
+# Local logs
+project1_paper/analysis/last_run.log

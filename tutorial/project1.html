@@ -1,0 +1,1716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Small Autoregressive Transformer Language Model Built from Scratch for Short Story Generation</title>
+<style>
+:root {
+  --bg: #f7f6f3; --surface: #ffffff; --surface-2: #f1efea; --text: #1f2328; --muted: #5d6470;
+  --border: #e2ded6; --accent: #2f6fdb; --accent-soft: #e6eefc; --good: #1f8a4c; --good-soft: #e3f4ea;
+  --warn: #b26a00; --warn-soft: #fdf1dc; --bad: #c0392b; --bad-soft: #fbe6e3; --code-bg: #f3f1ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171b; --surface: #1d2026; --surface-2: #242830; --text: #e7e9ee; --muted: #a0a7b4;
+    --border: #323742; --accent: #7aa7ff; --accent-soft: #1f2b44; --good: #5cc98a; --good-soft: #17301f;
+    --warn: #f0b45a; --warn-soft: #33281a; --bad: #ff8a7a; --bad-soft: #3a1f1c; --code-bg: #262a32;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171b; --surface: #1d2026; --surface-2: #242830; --text: #e7e9ee; --muted: #a0a7b4;
+  --border: #323742; --accent: #7aa7ff; --accent-soft: #1f2b44; --good: #5cc98a; --good-soft: #17301f;
+  --warn: #f0b45a; --warn-soft: #33281a; --bad: #ff8a7a; --bad-soft: #3a1f1c; --code-bg: #262a32;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.88em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+h1, h2, h3, h4 { line-height: 1.25; }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 32px; max-width: 1180px;
+  margin: 0 auto; padding: 24px 16px 80px; }
+nav.toc { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow-y: auto;
+  font-size: 14px; }
+nav.toc h4 { margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--border); color: var(--muted);
+  text-decoration: none; }
+nav.toc a:hover, nav.toc a.active { color: var(--accent); border-left-color: var(--accent); }
+nav.toc .group { margin: 14px 0 4px; font-weight: 600; color: var(--text); font-size: 13px; }
+main { min-width: 0; }
+header.hero { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+header.hero h1 { margin: 0 0 8px; font-size: 30px; }
+header.hero p { margin: 6px 0; color: var(--muted); max-width: 70ch; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: var(--good-soft); color: var(--good); }
+section { margin-top: 36px; }
+section > h2 { font-size: 24px; margin: 0 0 12px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 18px; }
+.stat { background: var(--surface-2); border-radius: 10px; padding: 14px; }
+.stat .v { font-size: 26px; font-weight: 700; }
+.stat .l { font-size: 13px; color: var(--muted); }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.flow span.box { background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 14px; }
+.flow span.arrow { color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0; }
+.tw { overflow-x: auto; }
+th, td { border-bottom: 1px solid var(--border); padding: 7px 9px; text-align: left; vertical-align: top; }
+th { background: var(--surface-2); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.phase { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-top: 22px; }
+.phase-head { display: flex; gap: 14px; align-items: center; }
+.phase-num { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--surface); font-weight: 700; font-size: 17px; }
+.phase-head h3 { margin: 0; font-size: 21px; }
+.phase-head .sub { color: var(--muted); font-size: 14px; }
+.part { margin-top: 16px; }
+.part > h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.part p { margin: 6px 0; }
+.part ul { margin: 6px 0; padding-left: 22px; }
+.analogy { background: var(--surface-2); border-radius: 10px; padding: 10px 14px; font-size: 15px; }
+.analogy::before { content: "Think of it like this: "; font-weight: 600; }
+.decide { background: var(--good-soft); border-left: 4px solid var(--good); border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
+.decide h4 { margin: 0 0 6px; color: var(--good); font-size: 14px; text-transform: uppercase; letter-spacing: .05em; }
+.decide p, .decide ul { margin: 4px 0; }
+.decide ul { padding-left: 20px; }
+.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
+.warn b { color: var(--warn); }
+.bar { height: 10px; border-radius: 5px; background: var(--accent); display: inline-block; vertical-align: middle; }
+.bar.bad { background: var(--bad); }
+.bar.good { background: var(--good); }
+figure { margin: 14px 0; }
+figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); background: #fff; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.mask { display: inline-grid; grid-template-columns: repeat(5, 30px); gap: 3px; font-size: 13px; text-align: center; }
+.mask div { padding: 3px 0; border-radius: 4px; }
+.mask .h { color: var(--muted); }
+.mask .y { background: var(--good-soft); color: var(--good); }
+.mask .n { background: var(--bad-soft); color: var(--bad); }
+.theme-btn { float: right; background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+.gloss dt { font-weight: 600; margin-top: 10px; }
+.gloss dd { margin: 2px 0 0 0; color: var(--muted); }
+/* ---------- Basic ideas section ---------- */
+:root { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --grid:#e1e0d9; --axis:#c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --grid:#2c2c2a; --axis:#383835; } }
+:root[data-theme="dark"] { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --grid:#2c2c2a; --axis:#383835; }
+.idea { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-top: 22px; }
+.idea > h3 { margin: 0 0 4px; font-size: 21px; display: flex; gap: 10px; align-items: center; }
+.idea > h3 .tag { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.idea .lead { color: var(--muted); margin: 0 0 8px; }
+.demo { background: var(--surface-2); border-radius: 12px; padding: 16px; margin-top: 14px; }
+.demo-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.demo-note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.on { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.tok { display: inline-flex; flex-direction: column; align-items: center; border-radius: 8px; padding: 5px 9px; margin: 3px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 15px; border: 1px solid var(--border);
+  background: var(--surface); animation: pop .35s ease both; white-space: pre; }
+.tok small { font-size: 11px; color: var(--muted); }
+.tok.special { background: var(--warn-soft); }
+.tok.hl { outline: 2px solid var(--accent); }
+.tok.dim { opacity: .35; }
+.c0 { background: color-mix(in srgb, var(--s1) 18%, var(--surface)); }
+.c1 { background: color-mix(in srgb, var(--s2) 18%, var(--surface)); }
+.c2 { background: color-mix(in srgb, var(--s3) 18%, var(--surface)); }
+.c3 { background: color-mix(in srgb, var(--s4) 22%, var(--surface)); }
+.c4 { background: color-mix(in srgb, var(--s5) 20%, var(--surface)); }
+.c5 { background: color-mix(in srgb, var(--s6) 16%, var(--surface)); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.nw-text { font-size: 22px; line-height: 1.5; min-height: 70px; font-family: Georgia, "Times New Roman", serif; }
+.nw-text .new { background: var(--good-soft); color: var(--good); border-radius: 4px; padding: 0 3px; animation: pop .4s ease both; }
+.cursor { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: -3px; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.bars { display: grid; grid-template-columns: max-content minmax(0, 1fr) 62px; gap: 6px 10px; align-items: center; margin-top: 8px; }
+.bars .lab { font-family: ui-monospace, Consolas, monospace; font-size: 14px; white-space: pre; }
+.bars .track { height: 14px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.bars .fill { height: 100%; border-radius: 0 4px 4px 0; background: var(--s1); transition: width .45s ease; }
+.bars .fill.off { background: var(--axis); }
+.bars .fill.win { background: var(--good); }
+.bars .val { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.bars .lab.off, .bars .val.off { color: var(--muted); text-decoration: line-through; }
+.bpe-row { display: flex; flex-wrap: wrap; gap: 4px; min-height: 48px; align-items: center; }
+.bpe-row .tok { font-size: 18px; }
+.bpe-row .tok.merged { background: var(--good-soft); outline: 2px solid var(--good); }
+.seq-grid { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.seq-grid .tok { margin: 0; font-size: 13px; padding: 4px 6px; }
+.seq-label { font-size: 13px; color: var(--muted); align-self: center; white-space: nowrap; }
+.seq-grid .tok.ans { outline: 2px solid var(--good); background: var(--good-soft); }
+.flow-stack { display: flex; flex-direction: column; align-items: stretch; gap: 0; max-width: 460px; }
+.layer { border-radius: 10px; padding: 9px 14px; text-align: center; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); font-size: 14px; position: relative; }
+.layer:hover, .layer.sel { border-color: var(--accent); }
+.layer.sel { box-shadow: 0 0 0 2px var(--accent-soft); }
+.layer.glow { animation: glow 4.2s ease-in-out infinite; }
+@keyframes glow { 0%, 100% { background: var(--surface); } 8% { background: var(--accent-soft); } 16% { background: var(--surface); } }
+.down { text-align: center; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.blockgroup { border: 2px dashed var(--accent); border-radius: 12px; padding: 8px; position: relative; }
+.blockgroup .x6 { position: absolute; right: -12px; top: -12px; background: var(--accent); color: var(--surface);
+  font-weight: 700; border-radius: 999px; padding: 2px 9px; font-size: 13px; }
+.tr-wrap { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.tr-info { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; position: sticky; top: 16px; }
+.tr-info h5 { margin: 0 0 6px; font-size: 16px; }
+.heat { display: grid; gap: 3px; font-size: 12px; overflow-x: auto; }
+.heat .h { font-family: ui-monospace, Consolas, monospace; color: var(--muted); display: flex; align-items: center; white-space: pre; }
+.heat .h.col { justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); padding: 4px 0; }
+.heat .cell { height: 34px; border-radius: 4px; display: grid; place-items: center; font-variant-numeric: tabular-nums; cursor: pointer; }
+.heat .cell.mask { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 4px, var(--border) 4px, var(--border) 6px); color: var(--muted); }
+.heat .row-sel { outline: 2px solid var(--accent); }
+.att-sentence { font-size: 20px; margin: 12px 0 4px; line-height: 2; }
+.att-sentence span { padding: 2px 4px; border-radius: 4px; transition: background .3s; }
+.cycle { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cycle .stepbox { flex: 1 1 140px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); padding: 10px 12px; font-size: 14px; transition: all .3s; }
+.cycle .stepbox b { display: block; font-size: 15px; }
+.cycle .stepbox.act { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-3px); }
+.cycle .arr { color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin: 4px 0 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.legend i.line { height: 3px; border-radius: 2px; vertical-align: 3px; width: 18px; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--muted); font-size: 12px; font-family: system-ui, sans-serif; }
+svg.chart text.ink { fill: var(--text); }
+svg.chart .gridl { stroke: var(--grid); stroke-width: 1; }
+svg.chart .axisl { stroke: var(--axis); stroke-width: 1; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.15); opacity: 0; transition: opacity .12s; z-index: 10; max-width: 260px; }
+.ppl-big { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dots { display: grid; grid-template-columns: repeat(20, 14px); gap: 4px; margin-top: 8px; }
+.dots span { width: 14px; height: 14px; border-radius: 50%; background: var(--s1); animation: pop .25s ease both; }
+.dots span.cut { background: var(--axis); }
+input[type=range] { width: 100%; max-width: 420px; accent-color: var(--accent); }
+.vec { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 6px; }
+.vec span { min-width: 46px; text-align: center; font-size: 12px; padding: 6px 2px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.stackbar { display: flex; gap: 2px; height: 34px; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+.stackbar div { display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 600; }
+.cards3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+.cards3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.cards3 .big { font-size: 28px; }
+.rep { background: var(--bad-soft); color: var(--bad); border-radius: 3px; padding: 0 2px; }
+.ts-wrap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; }
+.ts-wrap .arrow-big { font-size: 28px; color: var(--muted); text-align: center; }
+.student .fill { animation: learn 4s ease-in-out infinite; }
+@keyframes learn { 0% { width: var(--start); } 60%, 100% { width: var(--end); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .student .fill { width: var(--end); }
+}
+@media (max-width: 860px) {
+  .tr-wrap { grid-template-columns: 1fr; }
+  .tr-info { position: static; }
+  .ts-wrap { grid-template-columns: 1fr; }
+  .ts-wrap .arrow-big { transform: rotate(90deg); }
+  .idea { padding: 18px 16px; }
+  .nw-text { font-size: 19px; }
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  nav.toc { position: static; max-height: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; }
+  header.hero { padding: 20px; }
+  header.hero h1 { font-size: 24px; }
+  .phase { padding: 18px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <h4>Contents</h4>
+  <a href="#overview">The big picture</a>
+  <div class="group">Start here: basic ideas</div>
+  <a href="#b-lm">1. Language model</a>
+  <a href="#b-tok">2. Tokenizer</a>
+  <a href="#b-seq">3. Number sequences</a>
+  <a href="#b-emb">4. Embedding</a>
+  <a href="#b-tr">5. Transformer</a>
+  <a href="#b-att">6. Attention and the mask</a>
+  <a href="#b-par">7. Parameters</a>
+  <a href="#b-train">8. Training and loss</a>
+  <a href="#b-split">9. Train, validation, test</a>
+  <a href="#b-ppl">10. Perplexity</a>
+  <a href="#b-dec">11. Decoding</a>
+  <a href="#b-qual">12. Measuring stories</a>
+  <a href="#b-teach">13. Teacher and student</a>
+  <div class="group">The project</div>
+  <a href="#results">Final results</a>
+  <a href="#map">Decision map</a>
+  <div class="group">Part A: Prepare</div>
+  <a href="#p1">1. Environment</a>
+  <a href="#p2">2. Get the data</a>
+  <a href="#p3">3. Tokenizer</a>
+  <a href="#p4">4. Training sequences</a>
+  <div class="group">Part B: Build the model</div>
+  <a href="#p5">5. Transformer</a>
+  <a href="#p6">6. Causal attention</a>
+  <a href="#p7">7. Model size</a>
+  <div class="group">Part C: Train and measure</div>
+  <a href="#p8">8. Training</a>
+  <a href="#p9">9. Perplexity</a>
+  <a href="#p10">10. Text generation</a>
+  <a href="#p11">11. Sampling experiment</a>
+  <a href="#p12">12. Full evaluation</a>
+  <a href="#p13">13. Error analysis</a>
+  <div class="group">Part D: Hand over</div>
+  <a href="#p14">14. Teacher package</a>
+  <a href="#lessons">Lessons learned</a>
+  <a href="#glossary">Glossary</a>
+</nav>
+
+<main>
+
+<header class="hero" id="overview">
+  <button class="theme-btn" id="themeBtn" type="button">Light / dark</button>
+  <span class="badge">All 14 phases done</span>
+  <h1>A Small Autoregressive Transformer Language Model Built from Scratch for Short Story Generation</h1>
+  <p style="margin-top:0;font-size:19px;color:var(--text)">A Small Language Model Built from Scratch for Children's Story Generation</p>
+  <p style="margin-top:0"><b>Project 1 tutorial</b></p>
+  <p>We built a small GPT-style model ourselves, trained it on a computer's CPU with simple children's stories
+    (TinyStories), and measured how good it is. It now writes short stories on its own. In Project 2 it will be
+    the <b>teacher</b> that a smaller model learns from.</p>
+  <p>This page explains every step: <b>what</b> we did, <b>why</b>, what <b>result</b> we got, and
+    <b>how that result told us what to do next</b>.</p>
+
+  <h3 style="margin-top:22px">The one idea behind everything</h3>
+  <p>The model learns one skill only: <b>guess the next word</b> from all the words before it.</p>
+<pre><code>Once upon          → a
+Once upon a        → time
+Once upon a time   → there</code></pre>
+  <p>If you can guess the next word very well, again and again, you can write a whole story.</p>
+
+  <h3 style="margin-top:22px">The pipeline (the order we built things in)</h3>
+  <div class="flow">
+    <span class="box">Stories</span><span class="arrow">→</span>
+    <span class="box">Tokenizer</span><span class="arrow">→</span>
+    <span class="box">Number sequences</span><span class="arrow">→</span>
+    <span class="box">Transformer</span><span class="arrow">→</span>
+    <span class="box">Training</span><span class="arrow">→</span>
+    <span class="box">Perplexity</span><span class="arrow">→</span>
+    <span class="box">Writing stories</span><span class="arrow">→</span>
+    <span class="box">Compare decoding</span><span class="arrow">→</span>
+    <span class="box">Find errors</span><span class="arrow">→</span>
+    <span class="box">Teacher package</span>
+  </div>
+</header>
+
+<section id="basics">
+  <h2>Start here: the basic ideas</h2>
+  <div class="card">
+    <p>This part explains, one by one, the words used in the project. Each idea has a figure, and most figures
+      can be played with: press the buttons, move the sliders, or point at things.</p>
+    <p><b>The numbers in the figures are real.</b> They come from <i>our</i> trained model
+      (<code>teacher/teacher.pt</code>), not from a textbook. Only the overfitting picture in idea 9 is a drawing.</p>
+  </div>
+
+  <!-- ===== 1. Language model ===== -->
+  <div class="idea" id="b-lm">
+    <h3><span class="tag">Idea 1</span> What is a language model?</h3>
+    <p class="lead">A program that guesses the next piece of text.</p>
+    <p>A <b>language model</b> reads some text and gives a <b>probability</b> (a chance, from 0% to 100%) to every
+      possible next word. To write, it picks one word, adds it to the text, and guesses again. Doing this one word
+      at a time, where each new guess uses everything written so far, is called <b>autoregressive</b>.</p>
+    <p class="analogy">the "finish my sentence" game. If I say "Once upon a…", you're almost sure the next word is
+      "time". Our model has played this game about 164 million times while reading stories.</p>
+    <div class="demo">
+      <div class="demo-title">Watch our model write, one token at a time</div>
+      <div class="nw-text" id="nwText"></div>
+      <div style="font-size:14px;color:var(--muted);margin-top:6px">The model's top 3 guesses for the next token
+        (green = the token that comes next):</div>
+      <div class="bars" id="nwBars"></div>
+      <div class="controls">
+        <button class="btn" id="nwPlay" type="button">▶ Play</button>
+        <button class="btn" id="nwStep" type="button">Next step</button>
+        <button class="btn" id="nwReset" type="button">Start again</button>
+        <span id="nwInfo" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <div class="demo-note">Look at "Once upon a" → "time": 99.99%. The model is almost never surprised there.
+        After "a little" it is much less sure (girl 68%, boy 19%), because many stories could go on from there.</div>
+    </div>
+  </div>
+
+  <!-- ===== 2. Tokenizer ===== -->
+  <div class="idea" id="b-tok">
+    <h3><span class="tag">Idea 2</span> Tokenizer</h3>
+    <p class="lead">Text → small pieces → numbers.</p>
+    <p>A computer can't read letters, only numbers. A <b>tokenizer</b> cuts the text into pieces called
+      <b>tokens</b> and gives each piece an ID number. Our tokenizer knows <b>8,192</b> different tokens. A common
+      word is usually one token; a rare or made-up word is split into smaller pieces.</p>
+    <p>The sign <code>␣</code> means "a space before this word". " dog" (with a space) and "dog" are different
+      tokens.</p>
+    <div class="demo">
+      <div class="demo-title">Pick a sentence and see how our tokenizer cuts it</div>
+      <div class="controls" id="tokBtns" style="margin-top:0"></div>
+      <div id="tokRow" style="margin-top:10px"></div>
+      <div class="demo-note" id="tokNote"></div>
+    </div>
+    <p style="margin-top:16px"><b>How were the 8,192 pieces chosen? With BPE (Byte-Pair Encoding).</b> Start with
+      single letters. Find the pair of neighbours seen most often in the training stories and glue it into one new
+      piece. Repeat thousands of times. Common words end up as one piece.</p>
+    <div class="demo">
+      <div class="demo-title">Watch BPE glue a word together (real merges from our tokenizer)</div>
+      <div class="controls" id="bpeBtns" style="margin-top:0"></div>
+      <div class="bpe-row" id="bpeRow" style="margin-top:12px"></div>
+      <div class="demo-note" id="bpeNote"></div>
+      <div class="controls">
+        <button class="btn" id="bpeNext" type="button">Next merge</button>
+        <button class="btn" id="bpePlay" type="button">▶ Play</button>
+        <button class="btn" id="bpeReset" type="button">Start again</button>
+      </div>
+    </div>
+    <p style="margin-top:16px"><b>Special tokens</b> are signs, not words:</p>
+    <div>
+      <span class="tok special">&lt;PAD&gt;<small>0 · filler</small></span>
+      <span class="tok special">&lt;UNK&gt;<small>1 · unknown</small></span>
+      <span class="tok special">&lt;BOS&gt;<small>2 · story begins</small></span>
+      <span class="tok special">&lt;EOS&gt;<small>3 · story ends</small></span>
+    </div>
+    <p>The model learns to write <code>&lt;EOS&gt;</code> when a story is finished. That is how it knows when to stop.</p>
+  </div>
+
+  <!-- ===== 3. Number sequences ===== -->
+  <div class="idea" id="b-seq">
+    <h3><span class="tag">Idea 3</span> Number sequences (training examples)</h3>
+    <p class="lead">One long line of numbers, cut into windows; the answer is always "the next one".</p>
+    <p>Every story is turned into tokens and wrapped as <code>&lt;BOS&gt; story &lt;EOS&gt;</code>. All the stories
+      are joined into one very long line (372 million tokens for all the stories). The line is cut into
+      <b>windows</b> of equal length (256 in our project, 8 here so it fits on the screen).</p>
+    <p>From each window we make an <b>input</b> and a <b>target</b>. The target is the input <b>shifted by one</b>,
+      so at every position the correct answer is simply the next token.</p>
+    <div class="demo">
+      <div class="demo-title">The window and the shift by one</div>
+      <div class="seq-grid" id="seqLine"></div>
+      <div style="height:12px"></div>
+      <div class="seq-grid" id="seqIO"></div>
+      <div class="demo-note" id="seqNote"></div>
+      <div class="controls">
+        <button class="btn" id="seqPlay" type="button">▶ Play the questions</button>
+        <button class="btn" id="seqSlide" type="button">Move the window</button>
+      </div>
+      <div class="demo-note">One window of 8 tokens gives 8 small "guess the next token" questions at once. Our real
+        windows have 256 tokens, so each one gives 256 questions. A window can run across the end of one story into
+        the next. The <code>&lt;EOS&gt;</code> <code>&lt;BOS&gt;</code> signs tell the model where one story stops
+        and the next begins.</div>
+    </div>
+  </div>
+
+  <!-- ===== 4. Embedding ===== -->
+  <div class="idea" id="b-emb">
+    <h3><span class="tag">Idea 4</span> Embedding: a token becomes a list of numbers</h3>
+    <p class="lead">An ID number says nothing about meaning. An embedding does.</p>
+    <p>An ID like 645 for " dog" is just a label. So the first layer of the model swaps each ID for a list of
+      <b>384 numbers</b>, called its <b>embedding</b>. At first these numbers are random. Training slowly moves them
+      until words that are used in similar ways get similar numbers.</p>
+    <div class="demo">
+      <div class="demo-title">The first 12 of the 384 numbers for " girl" (blue = positive, orange = negative)</div>
+      <div class="vec" id="vecRow"></div>
+    </div>
+    <div class="demo">
+      <div class="demo-title">Our model's word map: 384 numbers squeezed down to 2, so we can draw them</div>
+      <div class="legend" id="embLegend"></div>
+      <svg class="chart" id="embChart" viewBox="0 0 600 400" role="img" aria-label="Scatter plot of word embeddings"></svg>
+      <div class="demo-note">Nobody told the model which words are colours or feelings. It found the groups by
+        itself, only from guessing the next word. Colours are used the same way ("a ___ ball"), so they ended up
+        together. The same goes for actions ("he ___ to the park"). "girl" and "boy" sit almost on top of each other,
+        because they are used in almost the same sentences. Point at a dot to see the word.</div>
+    </div>
+  </div>
+
+  <!-- ===== 5. Transformer ===== -->
+  <div class="idea" id="b-tr">
+    <h3><span class="tag">Idea 5</span> Transformer: the model's body</h3>
+    <p class="lead">A stack of the same block, six times. Click any box to read what it does.</p>
+    <p>The <b>Transformer</b> is the design used by GPT and almost all modern language models. The numbers flow from
+      the top of this picture to the bottom. In each <b>block</b>, the words first <i>listen to each other</i>
+      (attention), then each word <i>thinks on its own</i> (MLP).</p>
+    <div class="tr-wrap">
+      <div class="flow-stack" id="trStack">
+        <div class="layer glow" data-k="ids" style="animation-delay:0s">Token IDs <span style="color:var(--muted)">[2, 1140, 595, …]</span></div>
+        <div class="down">↓</div>
+        <div class="layer glow" data-k="emb" style="animation-delay:.35s">Token embedding + position embedding</div>
+        <div class="down">↓</div>
+        <div class="blockgroup"><span class="x6">× 6</span>
+          <div class="layer glow" data-k="ln" style="animation-delay:.7s">LayerNorm</div>
+          <div class="down">↓</div>
+          <div class="layer glow" data-k="att" style="animation-delay:1.05s"><b>Attention</b>: look at earlier words</div>
+          <div class="down">↓ + add the input back (residual)</div>
+          <div class="layer glow" data-k="ln" style="animation-delay:1.4s">LayerNorm</div>
+          <div class="down">↓</div>
+          <div class="layer glow" data-k="mlp" style="animation-delay:1.75s"><b>MLP</b>: think about each word</div>
+          <div class="down">↓ + add the input back (residual)</div>
+        </div>
+        <div class="down">↓</div>
+        <div class="layer glow" data-k="lnf" style="animation-delay:2.1s">Final LayerNorm</div>
+        <div class="down">↓</div>
+        <div class="layer glow" data-k="head" style="animation-delay:2.45s">Output layer: a score for each of 8,192 tokens</div>
+        <div class="down">↓</div>
+        <div class="layer glow" data-k="soft" style="animation-delay:2.8s">Softmax → probabilities (girl 68%, boy 19%, …)</div>
+      </div>
+      <div class="tr-info" id="trInfo"></div>
+    </div>
+  </div>
+
+  <!-- ===== 6. Attention ===== -->
+  <div class="idea" id="b-att">
+    <h3><span class="tag">Idea 6</span> Attention and the causal mask</h3>
+    <p class="lead">Each word decides which earlier words matter to it, and can never see later words.</p>
+    <p>To understand "She", the model must find who "she" is. <b>Attention</b> lets each token give a share of its
+      focus to every earlier token (the shares add up to 100%). The <b>causal mask</b> blocks the future: a token may
+      look only at itself and the tokens before it. Without the mask, the model would just copy the answer during
+      training.</p>
+    <div class="demo">
+      <div class="demo-title">Real attention from our model (layer 1, head 4) for "Lily has a red ball. She"</div>
+      <div class="att-sentence" id="attSentence"></div>
+      <div class="heat" id="attHeat"></div>
+      <div class="demo-note">Each row is a token <b>looking</b>; each column is a token <b>being looked at</b>. Click
+        a row. The striped squares are the future, blocked by the mask. In the last row, "She" puts
+        <b id="attShe"></b> of its attention on "Lily": the model has learned to link "She" back to the girl's name.
+        This is only one of the model's 36 "heads" (6 layers × 6 heads). The others look for other things.</div>
+    </div>
+  </div>
+
+  <!-- ===== 7. Parameters ===== -->
+  <div class="idea" id="b-par">
+    <h3><span class="tag">Idea 7</span> Parameters</h3>
+    <p class="lead">The 13.9 million numbers that training adjusts.</p>
+    <p>A <b>parameter</b> is one adjustable number inside the model, like one knob on a giant mixing desk. All the
+      embeddings, attention and MLP layers are made of them. Our model has <b>13,891,584</b>. Training means turning
+      all these knobs, a tiny bit at a time, until the guesses get good.</p>
+    <div class="demo">
+      <div class="demo-title">Where the 13.9M parameters are</div>
+      <div class="stackbar">
+        <div style="flex:3244032;background:var(--s2)">Embeddings 3.24M</div>
+        <div style="flex:10647552;background:var(--s1)">6 Transformer blocks + rest 10.65M</div>
+      </div>
+      <div class="cards3">
+        <div><div class="big">5.3M</div>baseline model</div>
+        <div><div class="big">13.9M</div>our teacher (small)</div>
+        <div><div class="big">124M</div>GPT-2 small (2019), for comparison</div>
+      </div>
+      <div class="demo-note">Each parameter is stored in 4 bytes: 13.9M × 4 = 53 MB, the size of
+        <code>teacher.pt</code>.</div>
+    </div>
+  </div>
+
+  <!-- ===== 8. Training and loss ===== -->
+  <div class="idea" id="b-train">
+    <h3><span class="tag">Idea 8</span> Training and loss</h3>
+    <p class="lead">Guess, check, measure the error, adjust a little. Repeat 10,000 times.</p>
+    <p>One <b>training step</b> is a loop of four actions. The <b>loss</b> measures how surprised the model was by
+      the true next token: <code>loss = −ln(probability given to the true token)</code>. If the model gave the true
+      token 100%, the loss is 0. The less it expected the token, the higher the loss.</p>
+    <div class="demo">
+      <div class="demo-title">One training step (it repeats over and over)</div>
+      <div class="cycle" id="cycle">
+        <div class="stepbox"><b>1. Guess</b>The model predicts the next token for 16,384 positions.</div>
+        <div class="arr">→</div>
+        <div class="stepbox"><b>2. Check</b>Compare the guesses with the true next tokens.</div>
+        <div class="arr">→</div>
+        <div class="stepbox"><b>3. Loss</b>Average how wrong it was (one number).</div>
+        <div class="arr">→</div>
+        <div class="stepbox"><b>4. Adjust</b>Backpropagation finds which way to turn each knob; AdamW turns them a little.</div>
+      </div>
+      <div class="demo-note">Step <b id="cycStep">1</b> of 10,000. Our small model did this for 9.9 hours.</div>
+    </div>
+    <div class="demo">
+      <div class="demo-title">How much loss for one token?</div>
+      <div class="tw"><table style="max-width:520px">
+        <tr><th>The model gave the true token…</th><th class="num">Loss</th></tr>
+        <tr><td>100% (completely sure, and right)</td><td class="num">0.00</td></tr>
+        <tr><td>50%</td><td class="num">0.69</td></tr>
+        <tr><td>10%</td><td class="num">2.30</td></tr>
+        <tr><td>1%</td><td class="num">4.61</td></tr>
+        <tr><td>1 in 8,192 (a pure random guess)</td><td class="num">9.01</td></tr>
+      </table></div>
+    </div>
+    <div class="demo">
+      <div class="demo-title">Real loss curves from our training (point at the chart)</div>
+      <div class="controls" style="margin-top:0">
+        <button class="btn on" id="lcSmall" type="button">small (teacher)</button>
+        <button class="btn" id="lcBase" type="button">baseline</button>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><i class="line" style="background:var(--s2)"></i>train loss (stories it learns from)</span>
+        <span><i class="line" style="background:var(--s1)"></i>validation loss (stories it never learns from)</span>
+      </div>
+      <svg class="chart" id="lossChart" viewBox="0 0 640 300" role="img" aria-label="Training and validation loss over training steps"></svg>
+      <div class="demo-note">The loss starts near 9 (random guessing) and falls quickly, then more slowly. The two
+        lines stay together, which means the model is <b>learning, not memorising</b>.</div>
+    </div>
+  </div>
+
+  <!-- ===== 9. Train / validation / test ===== -->
+  <div class="idea" id="b-split">
+    <h3><span class="tag">Idea 9</span> Train, validation, test, and overfitting</h3>
+    <p class="lead">Three separate piles of stories, each with one job.</p>
+    <div class="cards3">
+      <div><div class="big">📚</div><b>Train: 1,772,187 stories</b><br>The textbook. The model learns from these.</div>
+      <div><div class="big">📝</div><b>Validation: 10,995</b><br>The practice exam. Used to check progress and pick the best saved model.</div>
+      <div><div class="big">🎓</div><b>Test: 10,995</b><br>The final exam. Used once, only for the final score.</div>
+    </div>
+    <p style="margin-top:14px"><b>Overfitting</b> means memorising instead of learning. It's like a student who
+      memorises last year's answers: perfect on the practice questions, lost on new ones. You can see it in the
+      curves when train loss keeps falling but validation loss turns up.</p>
+    <div class="demo">
+      <div class="demo-title">A drawing, not real data: healthy learning compared with overfitting</div>
+      <div class="legend">
+        <span><i class="line" style="background:var(--s2)"></i>train loss</span>
+        <span><i class="line" style="background:var(--s1)"></i>validation loss</span>
+      </div>
+      <svg class="chart" viewBox="0 0 640 200" role="img" aria-label="Illustration of healthy learning and overfitting">
+        <text x="150" y="16" text-anchor="middle" class="ink">Healthy (like our models)</text>
+        <line class="axisl" x1="30" y1="180" x2="290" y2="180"/><line class="axisl" x1="30" y1="30" x2="30" y2="180"/>
+        <path d="M30,40 C80,120 140,150 290,160" fill="none" stroke="var(--s2)" stroke-width="2"/>
+        <path d="M30,38 C80,116 140,146 290,155" fill="none" stroke="var(--s1)" stroke-width="2"/>
+        <text x="160" y="196" text-anchor="middle">training steps →</text>
+        <text x="490" y="16" text-anchor="middle" class="ink">Overfitting (memorising)</text>
+        <line class="axisl" x1="350" y1="180" x2="610" y2="180"/><line class="axisl" x1="350" y1="30" x2="350" y2="180"/>
+        <path d="M350,40 C400,120 470,160 610,172" fill="none" stroke="var(--s2)" stroke-width="2"/>
+        <path d="M350,38 C400,110 450,128 480,128 C530,128 570,105 610,85" fill="none" stroke="var(--s1)" stroke-width="2"/>
+        <circle cx="480" cy="128" r="5" fill="none" stroke="var(--bad)" stroke-width="2"/>
+        <text x="488" y="146" class="ink">validation turns up: stop here</text>
+        <text x="480" y="196" text-anchor="middle">training steps →</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ===== 10. Perplexity ===== -->
+  <div class="idea" id="b-ppl">
+    <h3><span class="tag">Idea 10</span> Perplexity</h3>
+    <p class="lead">"How many tokens is the model choosing between?" Lower is better.</p>
+    <p><b>Perplexity = e<sup>loss</sup></b> (e ≈ 2.718), using the average loss over all the test tokens. It turns the
+      loss into a number that is easier to picture. A perplexity of 6 means the model is, on average, as unsure as if
+      it were picking between 6 equally likely tokens. It can't be lower than 1 (always sure and right).</p>
+    <div class="demo">
+      <div class="demo-title">Move the slider, or press a button</div>
+      <div class="controls" style="margin-top:0">
+        <button class="btn" data-loss="9.011" type="button">Random guessing</button>
+        <button class="btn" data-loss="2.2700" type="button">Our baseline</button>
+        <button class="btn" data-loss="1.7473" type="button">Our teacher</button>
+        <button class="btn" data-loss="0" type="button">Perfect</button>
+      </div>
+      <div style="margin-top:12px"><input type="range" id="pplSlider" min="0" max="9.1" step="0.01" value="1.7473" aria-label="Average loss"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:end;margin-top:6px">
+        <div><div style="font-size:13px;color:var(--muted)">Average loss</div><div class="ppl-big" id="pplLoss"></div></div>
+        <div><div style="font-size:13px;color:var(--muted)">Perplexity = e<sup>loss</sup></div><div class="ppl-big" id="pplVal" style="color:var(--accent)"></div></div>
+      </div>
+      <div style="font-size:14px;margin-top:8px" id="pplText"></div>
+      <div class="dots" id="pplDots"></div>
+      <div class="warn"><b>Fair comparison only:</b> perplexities can be compared only for models that use the same
+        tokenizer and the same test stories. Our baseline (9.68) and teacher (5.74) do, so the comparison is fair.</div>
+    </div>
+  </div>
+
+  <!-- ===== 11. Decoding ===== -->
+  <div class="idea" id="b-dec">
+    <h3><span class="tag">Idea 11</span> Decoding: how the next word is picked</h3>
+    <p class="lead">The model gives the chances. The decoding rule makes the choice.</p>
+    <p>The model only gives probabilities. A separate rule picks the token, and the same model writes very different
+      stories with different rules:</p>
+    <div class="tw"><table>
+      <tr><th>Rule</th><th>How it picks</th><th>In our tests</th></tr>
+      <tr><td><b>Greedy</b></td><td>always the most likely token</td><td>safe but loops ("You are not nice. You are not nice.")</td></tr>
+      <tr><td><b>Temperature</b></td><td>random, by probability; low T = sharper (safer), high T = flatter (wilder)</td><td>T 1.0: the most made-up words</td></tr>
+      <tr><td><b>Top-k</b></td><td>random, from only the k most likely tokens</td><td>good</td></tr>
+      <tr><td><b>Top-p</b></td><td>random, from the smallest group of top tokens whose chances add up to p</td><td><b>top-p 0.95 was best</b></td></tr>
+    </table></div>
+    <div class="demo">
+      <div class="demo-title">Try it with our model's real probabilities after "Once upon a time, there was a little"</div>
+      <div class="controls" id="decMethods" style="margin-top:0">
+        <button class="btn" data-m="greedy" type="button">Greedy</button>
+        <button class="btn" data-m="temp" type="button">Temperature</button>
+        <button class="btn" data-m="topk" type="button">Top-k</button>
+        <button class="btn on" data-m="topp" type="button">Top-p</button>
+      </div>
+      <div style="margin-top:12px;display:grid;gap:8px;max-width:520px">
+        <label style="font-size:14px">Temperature <b id="tVal">1.0</b><br><input type="range" id="tSlider" min="0.3" max="2" step="0.1" value="1"></label>
+        <label style="font-size:14px" id="kWrap">k <b id="kVal">20</b><br><input type="range" id="kSlider" min="1" max="50" step="1" value="20"></label>
+        <label style="font-size:14px" id="pWrap">p <b id="pVal">0.95</b><br><input type="range" id="pSlider" min="0.5" max="1" step="0.01" value="0.95"></label>
+      </div>
+      <div class="bars" id="decBars" style="margin-top:14px"></div>
+      <div style="font-size:14px;margin-top:8px" id="decInfo"></div>
+      <div class="controls">
+        <button class="btn" id="decPick" type="button">🎲 Pick a word</button>
+        <button class="btn" id="decPick10" type="button">Pick 10 times</button>
+        <span id="decOut" style="font-size:15px"></span>
+      </div>
+      <div id="decHist" style="margin-top:8px"></div>
+      <div class="demo-note">Grey, crossed-out tokens can't be picked under the current rule. Try Greedy (always
+        "girl"), then Temperature 2.0 (strange words get a real chance), then Top-p 0.95 (variety without the strange
+        words).</div>
+    </div>
+  </div>
+
+  <!-- ===== 12. Measuring stories ===== -->
+  <div class="idea" id="b-qual">
+    <h3><span class="tag">Idea 12</span> Measuring the stories</h3>
+    <p class="lead">Perplexity scores the guesses. These scores check the written stories.</p>
+    <div class="tw"><table>
+      <tr><th>Measure</th><th>What it means</th><th>Real stories</th><th>Teacher, top-p 0.95</th></tr>
+      <tr><td><b>Distinct-2</b></td><td>different word pairs ÷ all word pairs (variety; 1.0 = no pair ever repeats)</td><td class="num">0.764</td><td class="num">0.742</td></tr>
+      <tr><td><b>Repetition (Rep-4)</b></td><td>repeats 4-word phrases more than 95% of real stories do</td><td class="num">5%</td><td class="num">2%</td></tr>
+      <tr><td><b>EOS rate</b></td><td>the story ends by itself with <code>&lt;EOS&gt;</code></td><td class="num">—</td><td class="num">92%</td></tr>
+      <tr><td><b>Made-up words</b></td><td>words never seen in the training stories</td><td class="num">0.02%</td><td class="num">0.04%</td></tr>
+      <tr><td><b>Speed</b></td><td>tokens written per second / seconds per story</td><td class="num">—</td><td class="num">141/s, 1.4 s</td></tr>
+    </table></div>
+    <div class="demo">
+      <div class="demo-title">What repetition looks like (repeated phrases in red)</div>
+      <p style="font-family:Georgia,serif;font-size:17px;margin:4px 0">… <span class="rep">They did not hear the door open.</span> <span class="rep">They did not hear the door open.</span> …</p>
+      <div class="demo-note">A real loop from our model's stories (Phase 9).</div>
+      <div class="demo-note">Numbers can't tell whether a story makes sense, so in Phase 13 we also read 60 stories
+        by hand and counted contradictions, mixed-up characters and grammar errors.</div>
+    </div>
+  </div>
+
+  <!-- ===== 13. Teacher and student ===== -->
+  <div class="idea" id="b-teach">
+    <h3><span class="tag">Idea 13</span> Checkpoint, teacher and student</h3>
+    <p class="lead">What happens to the model next.</p>
+    <p>A <b>checkpoint</b> is a saved copy of the model's parameters, like a save point in a game. We saved one every
+      1,000 steps and kept the best one as the <b>teacher</b>.</p>
+    <p>In Project 2 (<b>knowledge distillation</b>), a smaller <b>student</b> model learns from the teacher. It doesn't
+      learn only the single true word. It learns the teacher's whole set of chances ("girl 68%, boy 19%, bird 2%…"),
+      which carries much more information: it tells the student that "boy" was also a good answer and "table" was
+      not.</p>
+    <div class="demo">
+      <div class="demo-title">The student learns to copy the teacher's chances (animation)</div>
+      <div class="ts-wrap">
+        <div><b>Teacher (13.9M)</b> after "…a little"
+          <div class="bars" id="tsTeacher"></div></div>
+        <div class="arrow-big">→</div>
+        <div class="student"><b>Student (smaller)</b> learning
+          <div class="bars" id="tsStudent"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <h2>Final results at a glance</h2>
+  <div class="card">
+    <p>We trained two models. The <b>baseline</b> is a small first try. <b>small</b> is the real target model and
+      the teacher for Project 2.</p>
+    <div class="stats">
+      <div class="stat"><div class="v">5.74</div><div class="l">Test perplexity of <b>small</b> (lower is better)</div></div>
+      <div class="stat"><div class="v">9.68</div><div class="l">Test perplexity of the baseline</div></div>
+      <div class="stat"><div class="v">13.9M</div><div class="l">Parameters in <b>small</b></div></div>
+      <div class="stat"><div class="v">9.9 h</div><div class="l">Training time on the CPU</div></div>
+      <div class="stat"><div class="v">1.4 s</div><div class="l">Time to write a 200-token story</div></div>
+      <div class="stat"><div class="v">top-p 0.95</div><div class="l">Best way to pick words</div></div>
+    </div>
+    <div class="tw">
+    <table style="margin-top:18px">
+      <tr><th></th><th>Baseline</th><th>small (teacher)</th></tr>
+      <tr><td>Shape</td><td>4 layers, width 256</td><td>6 layers, width 384</td></tr>
+      <tr><td>Parameters</td><td>5.32M</td><td>13.89M</td></tr>
+      <tr><td>Training stories</td><td>100,000</td><td>1,772,187 (all)</td></tr>
+      <tr><td>Training time</td><td>1.0 h</td><td>9.9 h</td></tr>
+      <tr><td><b>Test perplexity</b></td><td>9.68</td><td><b>5.74</b> (41% lower)</td></tr>
+      <tr><td>Speed (top-p 0.95)</td><td>266 tokens/s</td><td>141 tokens/s</td></tr>
+      <tr><td>How the stories read</td><td>loose, broken sentences</td><td>fluent, but the plot drifts</td></tr>
+    </table>
+    </div>
+    <p><b>In one sentence:</b> the model writes fluent sentences and finishes its stories, but it can't keep
+      characters and facts straight across a whole story.</p>
+  </div>
+</section>
+
+<section id="map">
+  <h2>Decision map: how each result led to the next step</h2>
+  <div class="card tw">
+    <p>A project like this is a chain of small decisions. Each phase answers one question. The answer tells you
+      what to do next, or that you have to go back and fix something first.</p>
+    <table>
+      <tr><th>#</th><th>Question we asked</th><th>What the result said</th><th>So we decided…</th></tr>
+      <tr><td>1</td><td>Can this PC train a model?</td><td>The CPU works; the AMD GPU would need a lot of setup</td><td>Start on CPU, look at the GPU again only if training is too slow</td></tr>
+      <tr><td>2</td><td>Is the data clean?</td><td>15% duplicates, 30% of validation also in train, no test set</td><td>Clean the data and split validation into validation + test</td></tr>
+      <tr><td>3</td><td>Does the tokenizer lose anything?</td><td>Exact round trip, 0 unknown tokens</td><td>Use it as it is, with 8,192 tokens</td></tr>
+      <tr><td>4</td><td>Are inputs and targets lined up?</td><td>The target is the input shifted by one, and the test passes</td><td>The data is ready for the model</td></tr>
+      <tr><td>5</td><td>Is the model built correctly?</td><td>Untrained loss 9.09 ≈ random guessing 9.01</td><td>The model is correct, so build attention next</td></tr>
+      <tr><td>6</td><td>Can the model cheat by seeing the future?</td><td>3 tests pass, and fail when the mask is removed</td><td>Attention is safe, so choose a size</td></tr>
+      <tr><td>7</td><td>How big a model, and on what data?</td><td>small takes ~9 h; 100K stories would be repeated 8×</td><td>Train the baseline first, then small on all the stories, overnight</td></tr>
+      <tr><td>8</td><td>Did training work?</td><td>Validation loss fell at every check, with no overfitting</td><td>Score both models properly</td></tr>
+      <tr><td>9</td><td>How good is it, really?</td><td>Test perplexity 5.74 against 9.68</td><td>small is clearly better, so look at its stories</td></tr>
+      <tr><td>10</td><td>Can it write a story?</td><td>Yes, but greedy loops and sampling makes slips</td><td>Compare the decoding methods carefully</td></tr>
+      <tr><td>11</td><td>Which way of picking words is best?</td><td>top-p 0.95 has no weak point</td><td>Make top-p 0.95 the default</td></tr>
+      <tr><td>12</td><td>Is the full report trustworthy?</td><td>The speed check was wrong, so we fixed it</td><td>small is good enough and fast enough to be the teacher</td></tr>
+      <tr><td>13</td><td>What mistakes does it make?</td><td>Mostly meaning (88% contradictions), not grammar</td><td>Write down its limits for Project 2</td></tr>
+      <tr><td>14</td><td>Can someone else use it?</td><td>It works outside the project and gives the same score</td><td>Project 1 is finished</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ PHASE 1 ============ -->
+<div class="phase" id="p1">
+  <div class="phase-head"><div class="phase-num">1</div><div><h3>Environment setup</h3>
+    <div class="sub">Get the tools ready</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Before cooking you check the kitchen. Here the "kitchen" is Python plus <b>PyTorch</b>, the library that
+      does the maths (arrays of numbers called tensors, and gradients).</p>
+    <p class="analogy">a cook checking the oven and the knives before starting a big meal.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/env_report.py</code></pre>
+    <p>This records the computer's details in <code>results/metrics/env_report.json</code> and runs a tiny
+      training test.</p>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <ul>
+      <li>Windows 11, Python 3.12.10, PyTorch 2.14.1 (CPU version).</li>
+      <li>CPU: Intel Core Ultra 7, 24 threads, 64 GB of memory.</li>
+      <li>GPU: AMD Radeon RX 9060. It needs ROCm, which takes a lot of setup on Windows.</li>
+      <li>Tiny test: the loss went down from 6.26 to 0.54, so learning works.</li>
+    </ul>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>Setting up the GPU could have taken days. The CPU already works, so we chose to <b>start on the CPU</b>
+      and come back to the GPU only if training turned out too slow (we checked this again in Phase 7).
+      The tools work, so next we need data.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 2 ============ -->
+<div class="phase" id="p2">
+  <div class="phase-head"><div class="phase-num">2</div><div><h3>Get TinyStories</h3>
+    <div class="sub">Download, look at and clean the data</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>TinyStories is about 2.1 million short, simple stories, made to test whether <i>small</i> models can learn
+      to write. The rule here is: <b>always look at your data before training on it.</b></p>
+    <p class="analogy">a teacher reading the textbook before giving it to the class, to find torn pages and
+      repeated chapters.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/inspect_data.py     # download and look
+python scripts/clean_data.py       # clean and split</code></pre>
+  </div>
+  <div class="part"><h4>Result: we found three problems</h4>
+    <ul>
+      <li><b>15% of the training stories were exact duplicates.</b></li>
+      <li><b>30% of the validation stories were also in the training set.</b> This is a "leak": the model would
+        be tested on stories it had already seen, so its score would look better than it really is.</li>
+      <li>1.2% of the stories were cut off in the middle of a sentence.</li>
+    </ul>
+    <div class="tw"><table>
+      <tr><th>Cleaning step</th><th class="num">Stories left</th><th class="num">Removed</th></tr>
+      <tr><td>Raw</td><td class="num">2,119,719</td><td></td></tr>
+      <tr><td>Remove empty</td><td class="num">2,119,489</td><td class="num">230</td></tr>
+      <tr><td>Remove cut-off (under 20 words or no ending)</td><td class="num">2,094,957</td><td class="num">24,532</td></tr>
+      <tr><td>Remove duplicates</td><td class="num">1,778,710</td><td class="num">316,247</td></tr>
+      <tr><td>Remove stories that are also in validation</td><td class="num"><b>1,772,187</b></td><td class="num">6,523</td></tr>
+    </table></div>
+    <p><b>We also made a test set.</b> TinyStories has no test split, and the validation set gets used during
+      training to choose the best model. So we split the 21,990 validation stories into two fixed halves:</p>
+    <div class="tw"><table>
+      <tr><th>Set</th><th class="num">Stories</th><th>Used for</th></tr>
+      <tr><td>validation</td><td class="num">10,995</td><td>checking progress during training, choosing the best model</td></tr>
+      <tr><td>test</td><td class="num">10,995</td><td><b>only for the final score</b>; never used to make a choice</td></tr>
+    </table></div>
+    <p class="analogy">validation is the practice exam you study with; test is the real exam you see only once.</p>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>The leak and the duplicates would have made every later number wrong. So we <b>cleaned first</b>, before
+      building anything. Now train, validation and test share 0 stories, and every later score can be trusted.
+      Next, text has to become numbers.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 3 ============ -->
+<div class="phase" id="p3">
+  <div class="phase-head"><div class="phase-num">3</div><div><h3>Build the tokenizer</h3>
+    <div class="sub">Turn text into numbers</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>A model only understands numbers. A <b>tokenizer</b> cuts text into pieces (<i>tokens</i>) and gives each
+      piece an ID. We used <b>BPE</b>: it starts from single letters and keeps joining the most common pairs. In
+      the end, common words are one token and rare words are split into pieces.</p>
+    <p class="analogy">writing shorthand. "the" is so common it gets its own symbol, while a rare word is spelled
+      out in pieces.</p>
+<pre><code>"The little boy played with his dog."
+→ The │ Ġlittle │ Ġboy │ Ġplayed │ Ġwith │ Ġhis │ Ġdog │ .
+→ [1607, 399, 527, 768, 347, 353, 645, 17]          (Ġ means "a space before")</code></pre>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/train_tokenizer.py --n_stories 100000 --vocab_size 8192</code></pre>
+    <p>8,192 tokens in total. Four of them are special: <code>&lt;PAD&gt;</code>=0, <code>&lt;UNK&gt;</code>=1 (unknown),
+      <code>&lt;BOS&gt;</code>=2 (story begins), <code>&lt;EOS&gt;</code>=3 (story ends).</p>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <div class="tw"><table>
+      <tr><th>Check</th><th>Result</th></tr>
+      <tr><td>Text → IDs → text</td><td>exactly the same text back ✅</td></tr>
+      <tr><td>Unknown tokens in validation</td><td>0 ✅</td></tr>
+      <tr><td>Tokens per word</td><td>1.20 (efficient)</td></tr>
+      <tr><td>Stories that fit in 256 tokens</td><td>85%</td></tr>
+    </table></div>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>No information is lost (an exact round trip, 0 unknowns), so the tokenizer is good enough to keep.
+      <b>This tokenizer is now fixed forever:</b> perplexity can only be compared between models that use the
+      same tokenizer, and Project 2 must use it too. Next we cut the numbers into training examples.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 4 ============ -->
+<div class="phase" id="p4">
+  <div class="phase-head"><div class="phase-num">4</div><div><h3>Prepare training sequences</h3>
+    <div class="sub">Make questions and answers for the model</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Every story becomes <code>&lt;BOS&gt; story &lt;EOS&gt;</code>, and all the stories are joined into one long
+      list of numbers. The list is cut into windows of 256 tokens. The key trick is to <b>shift by one</b>:</p>
+<pre><code>tokens  [BOS, The, boy, likes, dogs, EOS]
+input   [BOS, The, boy, likes, dogs]
+target  [The, boy, likes, dogs, EOS]</code></pre>
+    <p>At every position the answer is simply "the next token", so one window gives 256 small exercises at once.</p>
+    <p class="analogy">a fill-in-the-blank worksheet where every word is the answer to the blank after the words
+      before it.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/prepare_data.py --n_train 100000</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <div class="tw"><table>
+      <tr><th></th><th class="num">Train</th><th class="num">Validation</th><th class="num">Test</th></tr>
+      <tr><td>Stories</td><td class="num">100,000</td><td class="num">10,995</td><td class="num">10,995</td></tr>
+      <tr><td>Tokens</td><td class="num">20.8M</td><td class="num">2.27M</td><td class="num">2.26M</td></tr>
+      <tr><td>File size</td><td class="num">40 MB</td><td class="num">4.4 MB</td><td class="num">4.4 MB</td></tr>
+    </table></div>
+    <p>The test confirms the target is the input shifted by one ✅. Each number takes 2 bytes, which is enough
+      for 8,192 IDs.</p>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>We started with only 100K stories on purpose: mistakes are cheap on small data. The data now has the
+      exact shape the model needs, so next we build the model itself.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 5 ============ -->
+<div class="phase" id="p5">
+  <div class="phase-head"><div class="phase-num">5</div><div><h3>Build the Transformer</h3>
+    <div class="sub">The model's body, written by hand</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>We wrote the model ourselves in plain PyTorch, with no downloaded GPT-2. That way we understand every
+      part of it.</p>
+<pre><code>Token IDs
+  → token embedding + position embedding     (each ID → 384 numbers, plus "where am I")
+  → [ Transformer block ] × 6
+       LayerNorm → attention (look at earlier words) → + add input back
+       LayerNorm → MLP (think about each word)       → + add input back
+  → LayerNorm → output layer
+  → a score for each of the 8,192 tokens</code></pre>
+    <p class="analogy">a reading group. In each block, every word first "listens" to the earlier words
+      (attention), then "thinks" on its own (MLP). Six blocks are six rounds of discussion.</p>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <ul>
+      <li>Shapes check out: input (8, 256) → output (8, 256, 8192).</li>
+      <li><b>Untrained loss 9.09, close to random guessing: ln(8192) = 9.01.</b> That is exactly right for a model
+        that knows nothing yet.</li>
+      <li>After a short trial training run, "One day, a little" → <code>girl</code> 58.8%. Before training the
+        top guess was a random word.</li>
+    </ul>
+    <div class="tw"><table>
+      <tr><th>Config</th><th>Shape</th><th class="num">Parameters</th><th class="num">Size</th></tr>
+      <tr><td>smoke (bug test)</td><td>2 layers, width 128</td><td class="num">1.5M</td><td class="num">5.6 MB</td></tr>
+      <tr><td>baseline</td><td>4 layers, width 256</td><td class="num">5.3M</td><td class="num">20.3 MB</td></tr>
+      <tr><td>small (target)</td><td>6 layers, width 384</td><td class="num">13.9M</td><td class="num">53.0 MB</td></tr>
+    </table></div>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>The starting loss matched what theory says (about 9.0). If it had been 50, or 0.1, there would be a bug.
+      That told us the model is correct. One part still needed a proof: attention must not be able to cheat.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 6 ============ -->
+<div class="phase" id="p6">
+  <div class="phase-head"><div class="phase-num">6</div><div><h3>Causal attention</h3>
+    <div class="sub">No peeking at the future</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>When the model guesses word 3, it must not see word 3 or anything after it, or it would just copy the
+      answer. A <b>causal mask</b> hides the future:</p>
+    <div class="mask" aria-label="Causal mask">
+      <div class="h"></div><div class="h">1</div><div class="h">2</div><div class="h">3</div><div class="h">4</div>
+      <div class="h">1</div><div class="y">✓</div><div class="n">✗</div><div class="n">✗</div><div class="n">✗</div>
+      <div class="h">2</div><div class="y">✓</div><div class="y">✓</div><div class="n">✗</div><div class="n">✗</div>
+      <div class="h">3</div><div class="y">✓</div><div class="y">✓</div><div class="y">✓</div><div class="n">✗</div>
+      <div class="h">4</div><div class="y">✓</div><div class="y">✓</div><div class="y">✓</div><div class="y">✓</div>
+    </div>
+    <p>Rows are the word doing the looking; columns are the word it can see.</p>
+    <p class="analogy">an exam where every question is covered until you answer the one before it.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python -m pytest tests/test_causal.py -v</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <ul>
+      <li>All 3 tests pass: the weights on future words are 0, changing future words changes nothing earlier, and
+        the gradient to the future is 0.</li>
+      <li>A real example: "Lily has a red ball. She <i>throws it to her dog</i>" and "… She <i>eats a big green
+        apple</i>" give exactly the same predictions on the shared words.</li>
+      <li><b>We removed the mask on purpose, and all 3 tests failed.</b> So the tests really do catch cheating.</li>
+    </ul>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>A test only proves something if it <b>fails when the thing is broken</b>. Once we saw that, we trusted the
+      model. The next question was how big to make it.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 7 ============ -->
+<div class="phase" id="p7">
+  <div class="phase-head"><div class="phase-num">7</div><div><h3>Choose the first model size</h3>
+    <div class="sub">Measure before you commit</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Don't start big. Use small models to find bugs fast, then grow. Before a long run, measure the speed and
+      <b>estimate how long it will take</b>.</p>
+    <p class="analogy">timing one lap before deciding to run a marathon.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/benchmark.py --config configs/small.yaml     # and smoke, baseline</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <div class="tw"><table>
+      <tr><th>Config</th><th class="num">Parameters</th><th class="num">Tokens/s</th><th class="num">Memory</th><th class="num">Estimated run</th><th class="num">Passes over 100K stories</th></tr>
+      <tr><td>smoke</td><td class="num">1.5M</td><td class="num">45,780</td><td class="num">410 MB</td><td class="num">&lt; 1 min</td><td class="num">0.005</td></tr>
+      <tr><td>baseline</td><td class="num">5.3M</td><td class="num">11,613</td><td class="num">878 MB</td><td class="num">~1 h</td><td class="num">~2</td></tr>
+      <tr><td>small</td><td class="num">13.9M</td><td class="num">4,982</td><td class="num">660 MB</td><td class="num">~9 h</td><td class="num"><b>~8</b></td></tr>
+    </table></div>
+    <p>Using all 24 threads was the fastest. Memory is under 1 GB, so RAM is not a limit.</p>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <ul>
+      <li><b>CPU or GPU?</b> The longest run is about 9 hours, which fits overnight. So we stayed on the CPU, and
+        the GPU was not needed.</li>
+      <li><b>How much data?</b> On 100K stories, small would read each story about 8 times and could start
+        memorising. So small gets <b>all 1.77M stories</b>, and sees each story less than once.</li>
+      <li><b>Order:</b> baseline first (1 h, cheap; if something is wrong we find out fast), then small overnight.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ PHASE 8 ============ -->
+<div class="phase" id="p8">
+  <div class="phase-head"><div class="phase-num">8</div><div><h3>Train the model</h3>
+    <div class="sub">The long part</div></div></div>
+  <div class="part"><h4>What and why</h4>
+<pre><code>batch → model → guesses → loss (how wrong) → backpropagation → AdamW update</code></pre>
+    <ul>
+      <li><b>Loss:</b> how surprised the model is by the true next word. Lower is better.</li>
+      <li><b>Learning-rate schedule:</b> a short warm-up, then slowly smaller steps (cosine).</li>
+      <li><b>Validation loss:</b> the loss on stories the model never trains on. If train loss falls but validation
+        loss rises, the model is <i>memorising</i> (overfitting).</li>
+    </ul>
+    <p class="analogy">a student doing practice questions, checking the answer each time, and adjusting a little.
+      Every so often they take a practice exam they have never seen, to check they are really learning and not
+      just remembering answers.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python -m src.train --config configs/smoke.yaml       # 1. does the loss go down?
+python -m src.train --config configs/smoke.yaml --resume checkpoints/smoke/model_last.pt --max_steps 300
+                                                      # 2. can it continue after a stop?
+python -m src.train --config configs/baseline.yaml    # 3. first real model
+python scripts/prepare_data.py --n_train 0 --data_dir data/full   # tokenize all stories
+python -m src.train --config configs/small.yaml       # 4. target model, overnight</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <p><b>Baseline:</b> 62 min (the estimate was 59). Validation perplexity went from 51 to 9.71.</p>
+    <p><b>small:</b> 593.7 min (9.9 h) with no problems.</p>
+    <div class="tw"><table>
+      <tr><th>Step</th><th class="num">500</th><th class="num">1,000</th><th class="num">2,000</th><th class="num">4,000</th><th class="num">6,000</th><th class="num">8,000</th><th class="num">10,000</th></tr>
+      <tr><td>Validation loss</td><td class="num">3.16</td><td class="num">2.53</td><td class="num">2.19</td><td class="num">1.97</td><td class="num">1.87</td><td class="num">1.80</td><td class="num"><b>1.77</b></td></tr>
+      <tr><td>Validation perplexity</td><td class="num">23.5</td><td class="num">12.6</td><td class="num">8.92</td><td class="num">7.20</td><td class="num">6.49</td><td class="num">6.07</td><td class="num"><b>5.90</b></td></tr>
+    </table></div>
+    <figure>
+      <img src="img/loss_baseline_small.png" alt="Training and validation loss curves for the baseline and small models">
+      <figcaption>Loss curves for both models. Validation loss keeps going down and stays close to train loss,
+        so there is no overfitting.</figcaption>
+    </figure>
+    <p>After "there was a little", small guesses <code>girl</code> 75.3% and <code>boy</code> 15.7%.</p>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <ul>
+      <li>The baseline matched its time estimate, so the 9-hour estimate for small could be trusted.</li>
+      <li>Validation loss fell at every check and never rose, so there was no overfitting and no need to stop
+        early.</li>
+      <li>The log's 5.90 used only part of the validation set. We needed a proper, full score on the
+        <b>test</b> set.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ PHASE 9 ============ -->
+<div class="phase" id="p9">
+  <div class="phase-head"><div class="phase-num">9</div><div><h3>Perplexity</h3>
+    <div class="sub">The official score</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p><b>Perplexity = e<sup>loss</sup>.</b> It is roughly "how many words the model is choosing between" at
+      each step. A perplexity of 5.74 means the model is about as unsure as if it were picking from 5–6 equally
+      likely words. Lower is better.</p>
+    <p class="analogy">a quiz with multiple choice. Perplexity 100 means guessing among 100 options; perplexity 6
+      means the model has narrowed it down to about 6.</p>
+    <div class="warn"><b>Rule:</b> only compare models that use the same tokenizer and the same test stories.</div>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python -m src.evaluate --ckpt checkpoints/small/model_best.pt</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <div class="tw"><table>
+      <tr><th></th><th class="num">Test loss</th><th class="num">Test perplexity</th><th class="num">Validation perplexity</th><th style="width:35%"></th></tr>
+      <tr><td>baseline</td><td class="num">2.2700</td><td class="num">9.68</td><td class="num">9.68</td><td><span class="bar bad" style="width:96.8%"></span></td></tr>
+      <tr><td>small</td><td class="num">1.7473</td><td class="num"><b>5.74</b></td><td class="num">5.74</td><td><span class="bar good" style="width:57.4%"></span></td></tr>
+    </table></div>
+    <ul>
+      <li><b>small has 41% lower perplexity</b> than the baseline.</li>
+      <li>Test and validation agree (5.74 and 5.74), so picking the best model with validation did not "overfit"
+        to it.</li>
+    </ul>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>The numbers say small is clearly better. But a number is not a story. We had to <b>read what it
+      writes</b>.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 10 ============ -->
+<div class="phase" id="p10">
+  <div class="phase-head"><div class="phase-num">10</div><div><h3>Text generation</h3>
+    <div class="sub">Let the model write</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Writing means repeating one step: get the probabilities → <b>pick</b> a token → add it → repeat, until
+      <code>&lt;EOS&gt;</code>. The way you <i>pick</i> is the "decoding method":</p>
+    <div class="tw"><table>
+      <tr><th>Method</th><th>How it picks</th></tr>
+      <tr><td>Greedy</td><td>always the most likely token</td></tr>
+      <tr><td>Temperature</td><td>picks at random by probability; low = safer, high = wilder</td></tr>
+      <tr><td>Top-k</td><td>picks at random from only the k most likely tokens</td></tr>
+      <tr><td>Top-p</td><td>picks at random from the smallest group of tokens whose probabilities add up to p</td></tr>
+    </table></div>
+    <p class="analogy">choosing what to eat. Greedy always orders the favourite dish. Top-p picks from the dishes
+      you like enough, and sometimes tries a less usual one.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python -m src.generate --ckpt checkpoints/small/model_best.pt --prompt "Once upon a time" --method greedy
+python -m src.generate --ckpt checkpoints/small/model_best.pt --prompt "Once upon a time" --method top_p --top_p 0.9 --num_samples 3
+python scripts/show_decoding.py --ckpt checkpoints/small/model_best.pt --prompt "Tom was sad because"</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <p>After "Tom was sad because", the model gives <code>he</code> 81.5%, <code>his</code> 13.2%, <code>it</code> 3.3%.</p>
+    <ul>
+      <li><b>Greedy</b> gives the same story every time. It is fluent but repeats itself ("didn't know what to do"
+        again and again).</li>
+      <li><b>Top-p</b> gives a different story each time. It has more variety but more slips: a book turns into a
+        "secret recipe", and a made-up word, "pollow", appears.</li>
+      <li>Both the variety and the mistakes come from the rare picks (for example "fly" at rank 9, 1.7%).</li>
+    </ul>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>Reading a few stories showed a <b>trade-off</b>: safe methods loop, and random methods make mistakes. A few
+      examples can't settle which method is best, so we needed a fair, measured comparison.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 11 ============ -->
+<div class="phase" id="p11">
+  <div class="phase-head"><div class="phase-num">11</div><div><h3>Sampling experiment</h3>
+    <div class="sub">Same model, 7 ways of picking words</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>We kept the model and the 8 prompts the same and changed only the decoding method. Then we measured:</p>
+    <ul>
+      <li><b>Distinct-2:</b> the share of word pairs that are different (variety). Real stories score 0.764.</li>
+      <li><b>Flagged repetitive:</b> the story repeats 4-word phrases more than 95% of real stories do.</li>
+      <li><b>EOS rate:</b> how often the story ends by itself.</li>
+      <li><b>Made-up words:</b> words that never appear in the training stories.</li>
+    </ul>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python -m src.evaluate --ckpt checkpoints/small/model_best.pt     (includes the experiment)
+python scripts/madeup_words.py --run baseline --run small</code></pre>
+  </div>
+  <div class="part"><h4>Result (small, 40 stories per setting)</h4>
+    <div class="tw"><table>
+      <tr><th>Setting</th><th class="num">Distinct-2 (real 0.764)</th><th class="num">Flagged (real 5%)</th><th class="num">Ended by itself</th><th class="num">Made-up words (real 0.02%)</th><th>Verdict</th></tr>
+      <tr><td>greedy</td><td class="num">0.586</td><td class="num">75%</td><td class="num">88%</td><td class="num">0%</td><td>too safe: loops</td></tr>
+      <tr><td>temp 0.7</td><td class="num">0.693</td><td class="num">25%</td><td class="num">92%</td><td class="num">0.01%</td><td>too safe</td></tr>
+      <tr><td>temp 1.0</td><td class="num">0.777</td><td class="num">2%</td><td class="num">100%</td><td class="num"><b>0.34%</b></td><td>too wild: made-up words</td></tr>
+      <tr><td>top-k 20</td><td class="num">0.733</td><td class="num">8%</td><td class="num">95%</td><td class="num">0.05%</td><td>good</td></tr>
+      <tr><td>top-k 50</td><td class="num">0.726</td><td class="num">10%</td><td class="num">92%</td><td class="num">0%</td><td>good</td></tr>
+      <tr><td>top-p 0.90</td><td class="num">0.738</td><td class="num">10%</td><td class="num">92%</td><td class="num">0%</td><td>good (close second)</td></tr>
+      <tr style="background:var(--good-soft)"><td><b>top-p 0.95</b></td><td class="num">0.742</td><td class="num"><b>2%</b></td><td class="num">92%</td><td class="num">0.04%</td><td><b>best balance</b></td></tr>
+    </table></div>
+    <p>Temp 1.0 looks best on 3 of the 4 numbers, but its stories contain words like "neverld" and
+      "alreadypow". This is why we also <b>read the stories, not just the numbers</b>, and why we added the
+      made-up word measure.</p>
+    <div class="warn"><b>Prompt problem found:</b> after "In a small house near the forest", the model puts a
+      "." 83.5% of the time, so the story starts with no character. The fault is in the prompt, not the model
+      (the prompt reads like the end of a sentence). We kept it unchanged so the baseline and small stay
+      comparable.</div>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>We chose <b>top-p 0.95</b> as the default because it has <i>no weak point</i>: low repetition, variety
+      close to real stories and few made-up words. Then we built one complete report covering quality, writing
+      and speed.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 12 ============ -->
+<div class="phase" id="p12">
+  <div class="phase-head"><div class="phase-num">12</div><div><h3>Evaluate the model</h3>
+    <div class="sub">One honest, complete report</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Don't report only perplexity. A good report has three groups: <b>quality</b> (loss, perplexity),
+      <b>writing</b> (repetition, variety, endings) and <b>performance</b> (size, speed, memory, training time).
+      It also records the exact hardware and settings, so someone else can repeat the run.</p>
+  </div>
+  <div class="part"><h4>A problem we found and fixed</h4>
+    <p>Every speed result was marked "not reliable, the PC is busy". The check was counting <b>our own</b>
+      program as "other programs" (it used 18% CPU right after loading the model). We fixed it: the check now
+      subtracts our own use, and measures other programs both before and during the timing.</p>
+    <p class="analogy">a scale that includes your own hand while you weigh a parcel. You have to subtract the
+      hand.</p>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <div class="tw"><table>
+      <tr><th></th><th>Baseline</th><th>small</th></tr>
+      <tr><td>Test perplexity</td><td>9.68</td><td><b>5.74</b></td></tr>
+      <tr><td>Size</td><td>20.3 MB</td><td>53.0 MB</td></tr>
+      <tr><td>Speed</td><td>266 tokens/s</td><td>141 tokens/s</td></tr>
+      <tr><td>One 200-token story</td><td>0.75 s</td><td>1.42 s</td></tr>
+      <tr><td>Memory (evaluation / training)</td><td>781 MB / 989 MB</td><td>941 MB / 1,438 MB</td></tr>
+      <tr><td>Training time</td><td>1.0 h</td><td>9.9 h</td></tr>
+    </table></div>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p><b>The trade-off:</b> small is 2.6× bigger, 1.9× slower and took 10× the training time. In return it has
+      41% lower perplexity and stories that read like stories. At 1.4 s per story it is fast enough to be a
+      teacher, so we chose small. The numbers measure repetition and variety, but not whether a story makes
+      sense, so we checked that by hand next.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 13 ============ -->
+<div class="phase" id="p13">
+  <div class="phase-head"><div class="phase-num">13</div><div><h3>Error analysis</h3>
+    <div class="sub">Read 60 stories and count the mistakes</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Some mistakes only a human reader can see. We read 60 stories and labelled each one using the same strict
+      rules (one slip anywhere counts):</p>
+    <ul>
+      <li><b>Contradiction:</b> something clashes with an earlier fact in the story.</li>
+      <li><b>Grammar:</b> a broken sentence or a made-up word.</li>
+      <li><b>Entity:</b> a character changes name, gender or species, or the wrong one speaks.</li>
+    </ul>
+    <p class="analogy">a teacher marking essays, not with a score but by type of mistake, to find out what to
+      teach next.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/error_labels_small.py     # writes the labels into error_analysis.csv and counts them</code></pre>
+  </div>
+  <div class="part"><h4>Result (small, 60 stories)</h4>
+    <div class="tw"><table>
+      <tr><th>Error</th><th class="num">Stories</th><th style="width:30%"></th><th>Example</th></tr>
+      <tr><td>Contradiction</td><td class="num">88%</td><td><span class="bar bad" style="width:88%"></span></td><td>dad is "at work" and "coming home" at the same moment</td></tr>
+      <tr><td>Entity</td><td class="num">55%</td><td><span class="bar bad" style="width:55%"></span></td><td>"a little mouse named Tim. Tim was a very obedient cat"</td></tr>
+      <tr><td>Grammar</td><td class="num">37%</td><td><span class="bar" style="width:37%"></span></td><td>"He liked to be park tomorrow"</td></tr>
+      <tr><td>Repetition (auto)</td><td class="num">22%</td><td><span class="bar" style="width:22%"></span></td><td>"He liked his mom. He liked his mom."</td></tr>
+      <tr><td>Incomplete (auto)</td><td class="num">7%</td><td><span class="bar" style="width:7%"></span></td><td>all 4 hit the 512-token limit</td></tr>
+    </table></div>
+    <ul>
+      <li>Only 5 of the 60 stories have no error at all.</li>
+      <li><b>The main weakness is meaning, not language.</b> Sentences are mostly fine, but the model loses track of
+        who is who and what is where.</li>
+      <li>The automatic repetition flag was right 11 times out of 13, so it can be trusted.</li>
+      <li>Caution: one person did the labelling, so treat these numbers as roughly ±10%.</li>
+    </ul>
+  </div>
+  <div class="decide"><h4>How we decided the next step</h4>
+    <p>We now know the teacher's limits. In Project 2, a student can't be expected to be more consistent than
+      its teacher. These limits went into the teacher's README, so Project 2 starts with honest expectations.
+      The last step is to pack everything up.</p>
+  </div>
+</div>
+
+<!-- ============ PHASE 14 ============ -->
+<div class="phase" id="p14">
+  <div class="phase-head"><div class="phase-num">14</div><div><h3>Package as the teacher for Project 2</h3>
+    <div class="sub">Make it usable by someone else</div></div></div>
+  <div class="part"><h4>What and why</h4>
+    <p>Project 2 trains a smaller <b>student</b> to copy this <b>teacher</b>. To compare them fairly, everything
+      about the teacher must be saved, and it must give the same score anywhere.</p>
+    <p class="analogy">packing a recipe box: the dish, the exact recipe, the exact ingredients and a photo of
+      what it should look like, so another cook can get the same result.</p>
+  </div>
+  <div class="part"><h4>What we did</h4>
+<pre><code>python scripts/package_teacher.py     # builds teacher/
+python teacher/verify_teacher.py      # checks it (~3 min)</code></pre>
+  </div>
+  <div class="part"><h4>Result</h4>
+    <ul>
+      <li><code>teacher/</code>: 36 files, 63 MB. <code>teacher.pt</code> is 53 MB (the training save was 159 MB;
+        the optimizer's memory was left out because it is only needed to keep training).</li>
+      <li>It contains the tokenizer and its fingerprint (SHA-256), configs, code, the test data, results, and a
+        list of every file with its fingerprint.</li>
+      <li>Two helpers for Project 2: <code>load_teacher()</code> and <code>next_token_probs()</code>.</li>
+      <li><b>Copied outside the project and checked there:</b> all files are OK, there are 13,891,584 parameters,
+        and the <b>test perplexity is 5.74, exactly as in Phase 9</b> ✅</li>
+      <li>Backup: <code>C:\Users\home\Backups\project1_teacher_2026-11-06\</code></li>
+    </ul>
+    <div class="warn"><b>Note:</b> C: and D: are on the same physical disk. A copy on a USB drive or in the cloud
+      is safer.</div>
+  </div>
+  <div class="decide"><h4>How we decided we were done</h4>
+    <p>The goal of this phase was: "someone else can load the teacher and get the same perplexity from these files
+      alone". That was tested and passed. <b>Project 1 is finished.</b> Next comes Project 2: distillation into a
+      smaller student.</p>
+  </div>
+</div>
+
+<section id="lessons">
+  <h2>Lessons learned (useful for any ML project)</h2>
+  <div class="card">
+    <ul>
+      <li><b>Look at the data first.</b> The 30% validation leak would have made every score wrong.</li>
+      <li><b>Keep a test set you never use for choices.</b> Then the final score is honest.</li>
+      <li><b>Check against theory.</b> An untrained loss of about ln(vocab size) proves the model is wired correctly.</li>
+      <li><b>Make tests fail on purpose.</b> A test you have never seen fail proves nothing.</li>
+      <li><b>Start small, measure, then scale.</b> A 1-hour baseline made the 10-hour run safe.</li>
+      <li><b>Numbers are not enough.</b> Temp 1.0 had the best numbers but made-up words, so read the output.</li>
+      <li><b>Check your measuring tools.</b> The speed check was counting our own program.</li>
+      <li><b>Change one thing at a time.</b> We kept the flawed prompt so the two models stayed comparable.</li>
+      <li><b>Prove it works somewhere else.</b> The package was checked outside the project.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="glossary">
+  <h2>Glossary</h2>
+  <div class="card">
+    <dl class="gloss">
+      <dt>Token</dt><dd>a piece of text (a word or part of a word) with a number ID.</dd>
+      <dt>Tokenizer (BPE)</dt><dd>the tool that cuts text into tokens by joining common letter pairs.</dd>
+      <dt>Parameter</dt><dd>one number inside the model that training adjusts. small has 13.9 million.</dd>
+      <dt>Transformer</dt><dd>the model design: blocks of attention + MLP stacked on top of each other.</dd>
+      <dt>Attention</dt><dd>lets each word look at the earlier words to understand the context.</dd>
+      <dt>Causal mask</dt><dd>hides future words so the model can't cheat.</dd>
+      <dt>Loss</dt><dd>how wrong the model's guess was. Lower is better.</dd>
+      <dt>Perplexity</dt><dd>e<sup>loss</sup>: about how many words the model is choosing between. Lower is better.</dd>
+      <dt>Overfitting</dt><dd>memorising the training data instead of learning; validation loss goes up.</dd>
+      <dt>Train / validation / test</dt><dd>data to learn from / data to check progress with / data for the final score only.</dd>
+      <dt>Checkpoint</dt><dd>a saved copy of the model at some point during training.</dd>
+      <dt>Decoding</dt><dd>the rule for picking the next word (greedy, temperature, top-k, top-p).</dd>
+      <dt>Distinct-2</dt><dd>the share of different word pairs: a measure of variety.</dd>
+      <dt>Teacher / student</dt><dd>in distillation, a big model (teacher) trains a smaller one (student) to copy it.</dd>
+    </dl>
+  </div>
+</section>
+
+<p style="margin-top:40px;color:var(--muted);font-size:13px">Full details: <code>INSTRUCTIONS.md</code> · Teacher
+  details: <code>teacher/README.md</code> · Plan: <code>docs/Project_1_Small_Autoregressive_LM_Local_PC_Plan.docx</code></p>
+
+</main>
+</div>
+
+<div id="tip" role="tooltip"></div>
+<script src="data/tutorial_data.js"></script>
+<script>
+(function () {
+  var D = window.TUT;
+  if (!D) { var b = document.getElementById("basics"); if (b) b.insertAdjacentHTML("afterbegin",
+    '<div class="warn"><b>Figures missing:</b> keep the file data/tutorial_data.js next to this page.</div>'); return; }
+  var $ = function (id) { return document.getElementById(id); };
+  var REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var tip = $("tip");
+  function showTip(html, ev) {
+    tip.innerHTML = html; tip.style.opacity = 1;
+    var x = ev.clientX + 14, y = ev.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip() { tip.style.opacity = 0; }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function vis(s) { return s.replace(/ /g, "␣"); }
+  function pct(p) {
+    if (p >= 0.1) return (p * 100).toFixed(1) + "%";
+    if (p >= 0.001) return (p * 100).toFixed(2) + "%";
+    if (p >= 0.0001) return (p * 100).toFixed(3) + "%";
+    return "<0.01%";
+  }
+  function bars(el, rows) {
+    el.innerHTML = rows.map(function (r) {
+      return '<div class="lab' + (r.off ? " off" : "") + '">' + esc(r.lab) + '</div>' +
+        '<div class="track"><div class="fill ' + (r.cls || "") + '" style="width:' + Math.max(r.w * 100, 0.4) + '%;' + (r.style || "") + '"></div></div>' +
+        '<div class="val' + (r.off ? " off" : "") + '">' + r.txt + '</div>';
+    }).join("");
+  }
+  function player(btn, stepFn, ms) {   // play/pause button that calls stepFn until it returns false
+    var timer = null;
+    function stop() { clearInterval(timer); timer = null; btn.textContent = "▶ Play"; }
+    btn.addEventListener("click", function () {
+      if (timer) { stop(); return; }
+      btn.textContent = "❚❚ Pause";
+      if (stepFn(true) === false) { stop(); return; }
+      timer = setInterval(function () { if (stepFn(false) === false) stop(); }, ms);
+    });
+    return { stop: stop };
+  }
+
+  /* ---------- 1. next-token game ---------- */
+  var NW = D.next_word, nwI = 0;
+  function nwRender() {
+    var done = nwI >= NW.length;
+    var ctx = done ? NW[NW.length - 1].context + NW[NW.length - 1].true : NW[nwI].context;
+    var html = "";
+    if (nwI === 0) html = '<span style="color:var(--muted)">(empty: the model has only seen &lt;BOS&gt;, "a story begins")</span>';
+    else { var last = NW[nwI - 1].true; html = esc(ctx.slice(0, ctx.length - last.length)) + '<span class="new">' + esc(last) + "</span>"; }
+    $("nwText").innerHTML = html + '<span class="cursor"></span>';
+    if (done) {
+      $("nwBars").innerHTML = "";
+      $("nwInfo").textContent = "Done. In a real story the model keeps going until it picks <EOS>.";
+      return;
+    }
+    var s = NW[nwI];
+    bars($("nwBars"), s.top.map(function (t) {
+      return { lab: vis(t[0]), w: t[1], txt: pct(t[1]), cls: t[0] === s.true ? "win" : "" };
+    }));
+    $("nwInfo").textContent = "Step " + (nwI + 1) + " of " + NW.length;
+  }
+  function nwNext() { if (nwI >= NW.length) return false; nwI++; nwRender(); return nwI < NW.length; }
+  var nwPlayer = player($("nwPlay"), function (first) { if (first && nwI >= NW.length) { nwI = 0; nwRender(); return true; } return nwNext(); }, 1300);
+  $("nwStep").addEventListener("click", function () { nwPlayer.stop(); nwNext(); });
+  $("nwReset").addEventListener("click", function () { nwPlayer.stop(); nwI = 0; nwRender(); });
+  nwRender();
+
+  /* ---------- 2. tokenizer ---------- */
+  var TOKNOTES = [
+    "8 words become 8 tokens. Every word here is common, so each one is a single token.",
+    "\"Lily\" is so common in TinyStories that it is a single token.",
+    "Even \"enormous\" and \"dragon\" are one token each. \"!\" is token 4.",
+    "\"pollow\" is a made-up word our model once wrote. The tokenizer still handles it by splitting it into known pieces: p + o + llow.",
+    "The emoji isn't one of the 8,192 tokens, so it is split into 4 raw bytes. The odd signs (ð Ł ĺ Ĭ) decode back to 😊 exactly. That's why the tokenizer never needs <UNK>."
+  ];
+  var tokSel = 0;
+  function tokRender() {
+    var t = D.tokens[tokSel];
+    $("tokRow").innerHTML = t.tokens.map(function (s, i) {
+      return '<span class="tok c' + (i % 6) + '" style="animation-delay:' + (i * 0.07) + 's">' + esc(s) + "<small>" + t.ids[i] + "</small></span>";
+    }).join("");
+    $("tokNote").textContent = '"' + t.text + '" → ' + t.tokens.length + " tokens. " + TOKNOTES[tokSel];
+    Array.prototype.forEach.call($("tokBtns").children, function (b, i) { b.classList.toggle("on", i === tokSel); });
+  }
+  $("tokBtns").innerHTML = D.tokens.map(function (t) { return '<button class="btn" type="button">' + esc(t.text) + "</button>"; }).join("");
+  Array.prototype.forEach.call($("tokBtns").children, function (b, i) { b.addEventListener("click", function () { tokSel = i; tokRender(); }); });
+  tokRender();
+
+  var bpeWords = Object.keys(D.bpe), bpeW = bpeWords[0], bpeK = 0;
+  function bpeRender() {
+    var st = D.bpe[bpeW], cur = st[bpeK], j = -1;
+    if (bpeK > 0) { var prev = st[bpeK - 1]; for (var i = 0; i < cur.length; i++) { if (cur[i] !== prev[i]) { j = i; break; } } }
+    $("bpeRow").innerHTML = cur.map(function (p, i) {
+      return '<span class="tok' + (i === j ? " merged" : "") + '">' + esc(p) + "</span>";
+    }).join("");
+    var note;
+    if (bpeK === 0) note = "Start: " + cur.length + " single characters.";
+    else {
+      var pr = st[bpeK - 1];
+      note = "Merge " + bpeK + " of " + (st.length - 1) + ": \"" + pr[j] + "\" + \"" + pr[j + 1] + "\" → \"" + cur[j] + "\"";
+    }
+    if (bpeK === st.length - 1) note += cur.length === 1 ? ". Done: the whole word is now one token." :
+      ". No more merges are possible: it stays " + cur.length + " pieces, because it isn't a common word.";
+    $("bpeNote").textContent = note;
+    Array.prototype.forEach.call($("bpeBtns").children, function (b) { b.classList.toggle("on", b.dataset.w === bpeW); });
+  }
+  $("bpeBtns").innerHTML = bpeWords.map(function (w) { return '<button class="btn" type="button" data-w="' + esc(w) + '">' + esc(w) + "</button>"; }).join("");
+  function bpeNext() { if (bpeK >= D.bpe[bpeW].length - 1) return false; bpeK++; bpeRender(); return bpeK < D.bpe[bpeW].length - 1; }
+  var bpePlayer = player($("bpePlay"), function (first) { if (first && bpeK >= D.bpe[bpeW].length - 1) { bpeK = 0; bpeRender(); return true; } return bpeNext(); }, 900);
+  Array.prototype.forEach.call($("bpeBtns").children, function (b) {
+    b.addEventListener("click", function () { bpePlayer.stop(); bpeW = b.dataset.w; bpeK = 0; bpeRender(); });
+  });
+  $("bpeNext").addEventListener("click", function () { bpePlayer.stop(); bpeNext(); });
+  $("bpeReset").addEventListener("click", function () { bpePlayer.stop(); bpeK = 0; bpeRender(); });
+  bpeRender();
+
+  /* ---------- 3. sequences ---------- */
+  var SEQ = [["<BOS>", 2], ["Lily", 1140], ["␣found", 595], ["␣a", 262], ["␣shiny", 972], ["␣red", 938], ["␣ball", 680], [".", 17], ["<EOS>", 3],
+    ["<BOS>", 2], ["The", 1607], ["␣dragon", 1784], ["␣was", 284], ["␣enormous", 3174], ["!", 4], ["<EOS>", 3], ["<BOS>", 2]];
+  var W = 8, ws = 0, sq = 0;
+  function chip(t, extra) {
+    return '<span class="tok' + (t[0].charAt(0) === "<" ? " special" : "") + (extra || "") + '">' + esc(t[0]) + "<small>" + t[1] + "</small></span>";
+  }
+  function seqRender() {
+    var line = $("seqLine");
+    line.style.gridTemplateColumns = "repeat(" + SEQ.length + ", max-content)";
+    line.innerHTML = SEQ.map(function (t, i) {
+      var inWin = i >= ws && i < ws + W, isTgt = i === ws + W;
+      return chip(t, inWin ? " hl" : (isTgt ? "" : " dim"));
+    }).join("");
+    var io = $("seqIO");
+    io.style.gridTemplateColumns = "max-content repeat(" + W + ", max-content)";
+    var h = '<span class="seq-label">input</span>';
+    for (var i = 0; i < W; i++) h += chip(SEQ[ws + i], i <= sq ? " hl" : " dim");
+    h += '<span class="seq-label">target</span>';
+    for (i = 0; i < W; i++) h += chip(SEQ[ws + i + 1], i === sq ? " ans" : (i < sq ? "" : " dim"));
+    io.innerHTML = h;
+    var given = SEQ.slice(ws, ws + sq + 1).map(function (t) { return t[0]; }).join(" ");
+    $("seqNote").innerHTML = "Question " + (sq + 1) + " of " + W + ": given <b>" + esc(given) + "</b> → the answer is <b>" + esc(SEQ[ws + sq + 1][0]) + "</b>";
+  }
+  var seqPlayer = player($("seqPlay"), function (first) { if (first) { sq = 0; seqRender(); return true; } if (sq >= W - 1) return false; sq++; seqRender(); return sq < W - 1; }, 1100);
+  $("seqSlide").addEventListener("click", function () { seqPlayer.stop(); ws = ws === 0 ? W : 0; sq = 0; seqRender(); });
+  seqRender();
+
+  /* ---------- 4. embeddings ---------- */
+  var ex = D.embedding_example.first12, mx = Math.max.apply(null, ex.map(Math.abs));
+  $("vecRow").innerHTML = '<span class="tok c0" style="margin-right:8px">␣girl<small>446</small></span>→ ' + ex.map(function (v) {
+    var a = Math.round(Math.abs(v) / mx * 60) + 8, c = v >= 0 ? "var(--s1)" : "var(--s2)";
+    return '<span style="background:color-mix(in srgb,' + c + " " + a + '%,var(--surface))">' + v.toFixed(3) + "</span>";
+  }).join("") + '<span style="color:var(--muted);font-size:13px;padding-left:6px">… 372 more numbers</span>';
+  var GROUPS = [["people", "var(--s1)"], ["animals", "var(--s2)"], ["colours", "var(--s3)"], ["feelings", "var(--s4)"], ["actions", "var(--s5)"], ["food", "var(--s6)"]];
+  var gcol = {}; GROUPS.forEach(function (g) { gcol[g[0]] = g[1]; });
+  $("embLegend").innerHTML = GROUPS.map(function (g) { return '<span><i style="background:' + g[1] + '"></i>' + g[0] + "</span>"; }).join("");
+  var OFF = { girl: [-8, -4, "end"], boy: [0, -10, "middle"], dog: [8, -3, "start"], cat: [8, 10, "start"], bird: [-8, 4, "end"], fish: [8, 4, "start"],
+    mom: [8, 4, "start"], dad: [8, 4, "start"], red: [-8, 12, "end"], blue: [-8, -2, "end"], green: [8, 10, "start"], yellow: [8, -4, "start"],
+    happy: [-8, 4, "end"], sad: [0, -10, "middle"], angry: [0, 18, "middle"], scared: [8, 4, "start"], ran: [-8, 10, "end"], jumped: [8, -4, "start"],
+    walked: [-8, -2, "end"], played: [8, 10, "start"], apple: [-8, 4, "end"], cake: [8, -3, "start"], cookie: [8, 12, "start"] };
+  var svg = $("embChart"), sh = "";
+  function ex_(x) { return 30 + (x + 0.62) / 1.04 * 540; }
+  function ey_(y) { return 20 + (0.40 - y) / 0.76 * 350; }
+  sh += '<rect x="20" y="10" width="560" height="370" rx="8" fill="none" class="gridl"/>';
+  D.embedding.forEach(function (e, i) {
+    var x = ex_(e.x), y = ey_(e.y), o = OFF[e.word] || [8, 4, "start"];
+    sh += '<g class="pt" data-i="' + i + '"><circle cx="' + x + '" cy="' + y + '" r="14" fill="transparent"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="5.5" fill="' + gcol[e.group] + '" stroke="var(--surface-2)" stroke-width="2"/>' +
+      '<text x="' + (x + o[0]) + '" y="' + (y + o[1]) + '" text-anchor="' + o[2] + '" class="ink">' + e.word + "</text></g>";
+  });
+  svg.innerHTML = sh;
+  Array.prototype.forEach.call(svg.querySelectorAll(".pt"), function (g) {
+    var e = D.embedding[+g.dataset.i];
+    g.addEventListener("pointermove", function (ev) { showTip("<b>" + e.word + "</b><br>group: " + e.group, ev); });
+    g.addEventListener("pointerleave", hideTip);
+  });
+
+  /* ---------- 5. transformer ---------- */
+  var TR = {
+    ids: ["Token IDs", "The input: a list of token numbers from the tokenizer, up to 256 at once. Example: [2, 1140, 595] = &lt;BOS&gt; Lily ␣found."],
+    emb: ["Token + position embedding", "Each ID becomes 384 numbers that carry its meaning (idea 4). A second set of 384 numbers is added that says <i>where</i> the token is: 1st, 2nd, 3rd… Without it the model wouldn't know the word order: \"dog bites man\" would look the same as \"man bites dog\"."],
+    ln: ["LayerNorm", "Rescales the 384 numbers of each token so they don't grow too big or too small. This keeps training stable, like setting the volume before the next speaker."],
+    att: ["Attention: the words talk to each other", "Each token looks back at the earlier tokens and collects what it needs (\"She\" looks for \"Lily\"). 6 heads look for different things at the same time. Then the result is <b>added to the input</b> (the residual), so nothing is lost. The whole block repeats 6 times, and each round builds a richer understanding. See idea 6."],
+    mlp: ["MLP: each word thinks on its own", "A small network applied to every token separately: 384 → 1,536 → 384 numbers. Much of what the model \"knows\" (that girls have names, that balls are round…) is stored here. The result is again added to the input."],
+    lnf: ["Final LayerNorm", "One last rescale before the output."],
+    head: ["Output layer", "Turns the 384 numbers of each position into <b>8,192 scores</b>, one per token in the vocabulary. It reuses the embedding table (weight tying), which saves 3.1M parameters."],
+    soft: ["Softmax", "Turns the scores into probabilities that add up to 100%. Training compares these with the true next token (idea 8), and decoding picks from them (idea 11)."]
+  };
+  function trShow(k) {
+    $("trInfo").innerHTML = "<h5>" + TR[k][0] + "</h5><div>" + TR[k][1] + "</div>";
+    Array.prototype.forEach.call($("trStack").querySelectorAll(".layer"), function (l) { l.classList.toggle("sel", l.dataset.k === k); });
+  }
+  Array.prototype.forEach.call($("trStack").querySelectorAll(".layer"), function (l) {
+    l.addEventListener("click", function () { trShow(l.dataset.k); });
+  });
+  trShow("att");
+
+  /* ---------- 6. attention ---------- */
+  var A = D.attention, AT = A.tokens, N = AT.length, aRow = N - 1;
+  function attRender() {
+    var hh = $("attHeat");
+    hh.style.gridTemplateColumns = "max-content repeat(" + N + ", minmax(34px, 1fr))";
+    var s = '<div class="h"></div>';
+    AT.forEach(function (t) { s += '<div class="h col">' + esc(t) + "</div>"; });
+    for (var i = 0; i < N; i++) {
+      s += '<div class="h" style="padding-right:6px">' + esc(AT[i]) + "</div>";
+      for (var j = 0; j < N; j++) {
+        if (j > i) { s += '<div class="cell mask" data-r="' + i + '" title="future: hidden by the mask">✗</div>'; continue; }
+        var v = A.matrix[i][j], a = Math.round(Math.sqrt(v) * 90) + 4;
+        s += '<div class="cell' + (i === aRow ? " row-sel" : "") + '" data-r="' + i + '" style="background:color-mix(in srgb,var(--s1) ' + a +
+          '%,var(--surface));color:' + (a > 55 ? "#fff" : "var(--text)") + '">' + Math.round(v * 100) + "</div>";
+      }
+    }
+    hh.innerHTML = s;
+    Array.prototype.forEach.call(hh.querySelectorAll(".cell"), function (c) {
+      c.addEventListener("click", function () { aRow = +c.dataset.r; attRender(); });
+    });
+    $("attSentence").innerHTML = AT.map(function (t, j) {
+      var v = j <= aRow ? A.matrix[aRow][j] : 0, a = Math.round(Math.sqrt(v) * 80);
+      var st = j > aRow ? "color:var(--muted);text-decoration:line-through" :
+        "background:color-mix(in srgb,var(--s1) " + a + "%,transparent)" + (j === aRow ? ";outline:2px solid var(--accent)" : "");
+      return '<span style="' + st + '">' + esc(t.replace("␣", "")) + "</span>";
+    }).join(" ") + '<div style="font-size:14px;color:var(--muted)">"' + esc(AT[aRow].replace("␣", "")) +
+      '" is looking back. The darker the word, the more attention it gets (numbers in %).</div>';
+  }
+  $("attShe").textContent = Math.round(A.matrix[N - 1][1] * 100) + "%";
+  attRender();
+
+  /* ---------- 8. training cycle ---------- */
+  var boxes = $("cycle").querySelectorAll(".stepbox"), cyc = 0, cycStep = 1;
+  if (!REDUCE) setInterval(function () {
+    boxes.forEach(function (b, i) { b.classList.toggle("act", i === cyc); });
+    cyc = (cyc + 1) % boxes.length;
+    if (cyc === 0) { cycStep = cycStep >= 10000 ? 1 : cycStep + 1; $("cycStep").textContent = cycStep.toLocaleString("en"); }
+  }, 1100);
+
+  /* ---------- 8b. loss curves ---------- */
+  var lc = $("lossChart"), run = "small";
+  function drawLoss() {
+    var C = D.curves[run], maxS = C.train[C.train.length - 1][0];
+    var L = 44, R = 92, T = 14, B = 34, Wd = 640 - L - R, Ht = 300 - T - B, y0 = 1, y1 = 9.5;
+    function X(s) { return L + s / maxS * Wd; }
+    function Y(v) { return T + (y1 - v) / (y1 - y0) * Ht; }
+    var s = "";
+    [2, 4, 6, 8].forEach(function (v) { s += '<line class="gridl" x1="' + L + '" x2="' + (L + Wd) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/><text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + "</text>"; });
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (f) { var st = Math.round(maxS * f); s += '<text x="' + X(st) + '" y="' + (T + Ht + 18) + '" text-anchor="middle">' + st.toLocaleString("en") + "</text>"; });
+    s += '<text x="' + (L + Wd / 2) + '" y="' + (T + Ht + 32) + '" text-anchor="middle">training step</text>';
+    s += '<text x="12" y="' + (T + Ht / 2) + '" text-anchor="middle" transform="rotate(-90 12 ' + (T + Ht / 2) + ')">loss</text>';
+    s += '<line class="axisl" x1="' + L + '" x2="' + (L + Wd) + '" y1="' + (T + Ht) + '" y2="' + (T + Ht) + '"/>';
+    s += '<line x1="' + L + '" x2="' + (L + Wd) + '" y1="' + Y(9.01) + '" y2="' + Y(9.01) + '" stroke="var(--axis)" stroke-dasharray="4 4"/>' +
+      '<text x="' + (L + Wd - 4) + '" y="' + (Y(9.01) + 14) + '" text-anchor="end">random guessing = 9.01</text>';
+    function path(pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1); }).join(""); }
+    s += '<path class="ln" d="' + path(C.train) + '" fill="none" stroke="var(--s2)" stroke-width="2" stroke-linejoin="round"/>';
+    s += '<path class="ln" d="' + path(C.val) + '" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>';
+    var lt = C.train[C.train.length - 1], lv = C.val[C.val.length - 1];
+    s += '<text class="ink" x="' + (X(lt[0]) + 6) + '" y="' + (Y(lt[1]) - 6) + '">train</text>';
+    s += '<text class="ink" x="' + (X(lv[0]) + 6) + '" y="' + (Y(lv[1]) + 14) + '">validation ' + lv[1].toFixed(2) + "</text>";
+    s += '<g id="lcHover" style="display:none"><line id="lcV" y1="' + T + '" y2="' + (T + Ht) + '" stroke="var(--axis)"/>' +
+      '<circle id="lcDv" r="5" fill="var(--s1)" stroke="var(--surface-2)" stroke-width="2"/><circle id="lcDt" r="5" fill="var(--s2)" stroke="var(--surface-2)" stroke-width="2"/></g>';
+    s += '<rect id="lcHit" x="' + L + '" y="' + T + '" width="' + Wd + '" height="' + Ht + '" fill="transparent"/>';
+    lc.innerHTML = s;
+    if (!REDUCE) Array.prototype.forEach.call(lc.querySelectorAll(".ln"), function (p) {
+      var len = p.getTotalLength(); p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
+      p.getBoundingClientRect(); p.style.transition = "stroke-dashoffset 1.6s ease"; p.style.strokeDashoffset = 0;
+    });
+    function nearest(arr, st) { var b = arr[0]; arr.forEach(function (p) { if (Math.abs(p[0] - st) < Math.abs(b[0] - st)) b = p; }); return b; }
+    var hit = $("lcHit"), hov = $("lcHover");
+    hit.addEventListener("pointermove", function (ev) {
+      var pt = lc.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      var sp = pt.matrixTransform(lc.getScreenCTM().inverse());
+      var st = (sp.x - L) / Wd * maxS, v = nearest(C.val, st), t = nearest(C.train, v[0]);
+      hov.style.display = "";
+      $("lcV").setAttribute("x1", X(v[0])); $("lcV").setAttribute("x2", X(v[0]));
+      $("lcDv").setAttribute("cx", X(v[0])); $("lcDv").setAttribute("cy", Y(v[1]));
+      $("lcDt").setAttribute("cx", X(t[0])); $("lcDt").setAttribute("cy", Y(t[1]));
+      showTip("<b>Step " + v[0].toLocaleString("en") + "</b><br>validation loss " + v[1].toFixed(2) + " (perplexity " + Math.exp(v[1]).toFixed(1) +
+        ")<br>train loss " + t[1].toFixed(2), ev);
+    });
+    hit.addEventListener("pointerleave", function () { hov.style.display = "none"; hideTip(); });
+  }
+  function setRun(r) { run = r; $("lcSmall").classList.toggle("on", r === "small"); $("lcBase").classList.toggle("on", r === "baseline"); drawLoss(); }
+  $("lcSmall").addEventListener("click", function () { setRun("small"); });
+  $("lcBase").addEventListener("click", function () { setRun("baseline"); });
+  var drawn = false;
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (en, ob) { if (en[0].isIntersecting && !drawn) { drawn = true; drawLoss(); ob.disconnect(); } }, { threshold: 0.3 }).observe(lc);
+  } else drawLoss();
+
+  /* ---------- 10. perplexity ---------- */
+  function pplUpdate(loss) {
+    var p = Math.exp(loss);
+    $("pplSlider").value = loss;
+    $("pplLoss").textContent = loss.toFixed(2);
+    $("pplVal").textContent = p < 100 ? p.toFixed(2) : Math.round(p).toLocaleString("en");
+    var t;
+    if (p < 1.5) t = "Almost always sure, and right. Real language is never this predictable.";
+    else if (p < 10) t = "Like choosing between about " + Math.round(p) + " equally likely tokens each time. Good for simple stories.";
+    else if (p < 100) t = "Like choosing between about " + Math.round(p) + " tokens: it has learned something, but not much.";
+    else t = "Like choosing between about " + Math.round(p).toLocaleString("en") + " tokens: basically random guessing among all 8,192.";
+    $("pplText").textContent = t;
+    var n = Math.max(1, Math.round(p)), shown = Math.min(n, 200), h = "";
+    for (var i = 0; i < shown; i++) h += '<span style="animation-delay:' + Math.min(i * 0.004, 0.6) + 's"></span>';
+    $("pplDots").innerHTML = h + (n > shown ? '<div style="grid-column:1/-1;font-size:13px;color:var(--muted)">+ ' + (n - shown).toLocaleString("en") + " more, too many to draw</div>" : "");
+  }
+  $("pplSlider").addEventListener("input", function () { pplUpdate(+this.value); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-loss]"), function (b) {
+    b.addEventListener("click", function () { pplUpdate(+b.dataset.loss); });
+  });
+  pplUpdate(1.7473);
+
+  /* ---------- 11. decoding ---------- */
+  var DL = D.decode_demo.logits, DLAB = D.decode_demo.labels, dm = "topp", hist = [];
+  function dist() {
+    var T = dm === "greedy" ? 1 : +$("tSlider").value, k = +$("kSlider").value, p = +$("pSlider").value;
+    var m = DL[0] / T, e = DL.map(function (l) { return Math.exp(l / T - m); }), z = e.reduce(function (a, b) { return a + b; }, 0);
+    var prob = e.map(function (v) { return v / z; }), keep = prob.length;
+    if (dm === "greedy") keep = 1;
+    else if (dm === "topk") keep = k;
+    else if (dm === "topp") { var c = 0; for (var i = 0; i < prob.length; i++) { c += prob[i]; if (c >= p) { keep = i + 1; break; } } }
+    var zk = 0; for (i = 0; i < keep; i++) zk += prob[i];
+    var pick = prob.map(function (v, i) { return i < keep ? v / zk : 0; });
+    return { prob: prob, pick: pick, keep: keep };
+  }
+  function decRender() {
+    var d = dist();
+    $("tVal").textContent = (+$("tSlider").value).toFixed(1);
+    $("kVal").textContent = $("kSlider").value; $("pVal").textContent = (+$("pSlider").value).toFixed(2);
+    $("tSlider").parentNode.style.display = dm === "greedy" ? "none" : "";
+    $("kWrap").style.display = dm === "topk" ? "" : "none";
+    $("pWrap").style.display = dm === "topp" ? "" : "none";
+    var rows = DLAB.map(function (lab, i) {
+      var off = i >= d.keep;
+      return { lab: vis(lab), w: off ? d.prob[i] : d.pick[i], txt: off ? pct(d.prob[i]) : pct(d.pick[i]), off: off, cls: off ? "off" : "" };
+    });
+    var restKeep = 0, restAll = 0;
+    for (var i = DLAB.length; i < d.prob.length; i++) { restAll += d.prob[i]; restKeep += d.pick[i]; }
+    var restOff = d.keep <= DLAB.length;
+    rows.push({ lab: "all other " + (d.prob.length - DLAB.length).toLocaleString("en") + " tokens", w: restOff ? restAll : restKeep,
+      txt: pct(restOff ? restAll : restKeep), off: restOff, cls: restOff ? "off" : "" });
+    bars($("decBars"), rows);
+    $("decInfo").innerHTML = "Tokens allowed: <b>" + d.keep.toLocaleString("en") + "</b> of 8,192. Chance that \"girl\" is picked: <b>" + pct(d.pick[0]) + "</b>.";
+    Array.prototype.forEach.call($("decMethods").children, function (b) { b.classList.toggle("on", b.dataset.m === dm); });
+  }
+  function decPick() {
+    var d = dist(), r = Math.random(), c = 0, idx = 0;
+    for (var i = 0; i < d.pick.length; i++) { c += d.pick[i]; if (r < c) { idx = i; break; } }
+    var lab = idx < DLAB.length ? vis(DLAB[idx]) : "a rare token (rank " + (idx + 1) + ")";
+    hist.unshift(lab); hist = hist.slice(0, 12);
+    $("decOut").innerHTML = "Picked: <b>" + esc(lab) + "</b>";
+    $("decHist").innerHTML = '<span style="font-size:13px;color:var(--muted)">Last picks: </span>' +
+      hist.map(function (h, i) { return '<span class="tok' + (i === 0 ? " hl" : "") + '" style="font-size:13px;padding:3px 7px">' + esc(h) + "</span>"; }).join("");
+  }
+  Array.prototype.forEach.call($("decMethods").children, function (b) {
+    b.addEventListener("click", function () { dm = b.dataset.m; hist = []; $("decHist").innerHTML = ""; $("decOut").textContent = ""; decRender(); });
+  });
+  ["tSlider", "kSlider", "pSlider"].forEach(function (id) { $(id).addEventListener("input", decRender); });
+  $("decPick").addEventListener("click", decPick);
+  $("decPick10").addEventListener("click", function () { for (var i = 0; i < 10; i++) decPick(); });
+  decRender();
+
+  /* ---------- 13. teacher / student ---------- */
+  var TS = [[" girl", 0.684, 0.30], [" boy", 0.192, 0.42], [" bird", 0.023, 0.12], [" bunny", 0.016, 0.20]];
+  bars($("tsTeacher"), TS.map(function (t) { return { lab: vis(t[0]), w: t[1], txt: pct(t[1]) }; }));
+  bars($("tsStudent"), TS.map(function (t) {
+    return { lab: vis(t[0]), w: t[1], txt: "→ " + pct(t[1]), cls: "", style: "--start:" + (t[2] * 100) + "%;--end:" + (t[1] * 100) + "%;background:var(--s3)" };
+  }));
+})();
+</script>
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var t = localStorage.getItem("p1-theme"); if (t) root.setAttribute("data-theme", t); } catch (e) {}
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("p1-theme", next); } catch (e) {}
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll("#toc a"));
+  var targets = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+  if ("IntersectionObserver" in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (l) { l.classList.toggle("active", l.getAttribute("href") === "#" + en.target.id); });
+        }
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    targets.forEach(function (t) { if (t) obs.observe(t); });
+  }
+})();
+</script>
+</body>
+</html>
